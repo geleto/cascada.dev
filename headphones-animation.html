@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Cascada · Streaming product comparisons</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #151b29;
+      --secondary: #576172;
+      --quiet: #7a8492;
+      --rule: #d9dee7;
+      --hairline: #e9edf2;
+      --surface: #ffffff;
+      --track: #e7ebf0;
+      --pending-disc: #aab3c1;
+      --token: 37px;
+      --process-token: 32px;
+      --result-token: 37px;
+      --icon-column: 42px;
+      --row-gap: 11px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--surface); }
+    body { margin: 0; color: var(--ink); background: var(--surface); font-family: inherit; -webkit-font-smoothing: antialiased; }
+    button, input { font: inherit; }
+    button:focus-visible, input:focus-visible { outline: 2px solid #1859c9; outline-offset: 3px; }
+    .pipeline { width: 100%; min-width: 0; position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--rule); }
+    .transport { display: flex; align-items: center; flex: none; gap: 7px; white-space: nowrap; }
+    .clock { font: 600 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--secondary); font-variant-numeric: tabular-nums; min-width: 40px; text-align: left; }
+    .control { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink); padding: 5px 8px; font-size: 11px; line-height: 1; cursor: pointer; height: 26px; }
+    .control:hover { background: #f4f6f9; }
+    .control svg { display: block; width: 12px; height: 12px; fill: currentColor; }
+    .stage { padding: 13px 18px 12px; position: relative; min-width: 0; }
+    .stage + .stage { border-top: 1px solid var(--rule); }
+    .stage-head { margin: 0 0 9px; }
+    .stage-title { margin: 0; font-size: 20px; font-weight: 610; letter-spacing: -.025em; line-height: 1.27; }
+    .slot-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
+    .slot { position: relative; display: flex; justify-content: center; align-items: center; min-width: 0; }
+    .slot + .slot { border-left: 1px solid var(--hairline); }
+    .slot-generate { height: 63px; }
+    .slot-results { height: 63px; }
+    .slot-index { position: absolute; top: 1px; left: 13px; color: #171c26; font: 550 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .mount { width: var(--token); height: var(--token); display: grid; place-items: center; flex: none; }
+    .mount-result { width: var(--result-token); height: var(--result-token); }
+    .disc { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; background: var(--product-color); box-shadow: none; }
+    .disc.is-pending { background: var(--pending-disc); }
+    .disc svg { width: 58%; height: 58%; display: block; overflow: visible; }
+    /* Finished stages stay in place and switch instantly to lighter, muted versions of their own colours. */
+    .disc.is-completed { opacity: .42; filter: saturate(.30) brightness(1.16); }
+    .process-row.is-completed .progress-fill { opacity: .49; filter: saturate(.36) brightness(1.08); }
+    .process-row.is-completed .progress-label { opacity: .59; }
+    .stage-process { padding-bottom: 4px; }
+    .process-table { --cols: var(--icon-column) repeat(4, minmax(0, 1fr)); width: 100%; }
+    .process-row { display: grid; grid-template-columns: var(--cols); column-gap: var(--row-gap); align-items: center; min-width: 0; height: 60px; border-bottom: 1px solid var(--hairline); }
+    .process-row:last-child { border-bottom: none; }
+    .process-mount { width: var(--process-token); height: var(--process-token); justify-self: center; }
+    .progress-cell { min-width: 0; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 6px; }
+    .progress-label { display: block; font-size: 11.5px; font-weight: 570; color: var(--secondary); line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; }
+    .progress-track { width: 100%; height: 8px; background: var(--track); overflow: hidden; }
+    .progress-fill { display: block; height: 100%; width: 0; background: var(--product-color); }
+    .process-row:not(.arrived) .progress-cell { visibility: hidden; }
+    .stage-results { border-top: 1px solid var(--rule); }
+    .result-slot { position: relative; }
+    .result-slot.is-finished:after { content: ""; position: absolute; bottom: 1px; left: 50%; width: 15px; height: 2px; background: var(--product-color); transform: translateX(-50%); }
+    .animation-layer { position: absolute; inset: 0; pointer-events: none; z-index: 6; overflow: hidden; }
+    .flying-disc { position: absolute; top: 0; left: 0; border-radius: 50%; display: grid; place-items: center; will-change: transform, width, height; background: var(--product-color); }
+    .flying-disc svg { width: 58%; height: 58%; }
+    .timebar { border-top: 1px solid var(--rule); display: flex; gap: 12px; align-items: center; padding: 7px 16px; min-height: 40px; }
+    .scrub { flex: 1; width: 100%; height: 16px; min-width: 0; margin: 0; cursor: pointer; -webkit-appearance: none; appearance: none; background: transparent; }
+    .scrub::-webkit-slider-runnable-track { height: 3px; border-radius: 0; background: linear-gradient(to right, #1c385b 0%, #1c385b var(--percentage, 0%), var(--track) var(--percentage, 0%), var(--track) 100%); }
+    .scrub::-moz-range-track { height: 3px; background: var(--track); }
+    .scrub::-moz-range-progress { height: 3px; background: #1c385b; }
+    .scrub::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 8px; height: 11px; border-radius: 0; background: #1c385b; margin-top: -4px; }
+    .scrub::-moz-range-thumb { width: 8px; height: 11px; border: 0; border-radius: 0; background: #1c385b; }
+    .live-status { font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--secondary); font-variant-numeric: tabular-nums; min-width: 36px; text-align: right; white-space: nowrap; }
+    @media (max-width: 600px) {
+      :root { --token: 32px; --process-token: 29px; --result-token: 32px; --icon-column: 32px; --row-gap: 6px; }
+      .transport { gap: 5px; }
+      .clock { min-width: 36px; font-size: 10px; }
+      .control { padding: 5px; height: 25px; }
+      .control-label { display: none; }
+      .stage { padding: 10px 11px 9px; }
+      .stage-head { margin-bottom: 7px; }
+      .stage-title { font-size: 17px; line-height: 1.31; font-weight: 610; }
+      .slot-generate, .slot-results { height: 53px; }
+      .slot-index { top: 2px; left: 6px; font-size: 11px; }
+      .stage-process { padding-bottom: 2px; }
+      .process-row { height: 53px; }
+      .progress-cell { gap: 5px; }
+      .progress-label { font-size: 10.5px; }
+      .progress-track { height: 7px; }
+      .timebar { padding: 5px 11px; min-height: 36px; gap: 8px; }
+      .live-status { font-size: 10px; min-width: 32px; }
+    }
+    @media (max-width: 345px) {
+      :root { --row-gap: 4px; --icon-column: 29px; --token: 30px; --process-token: 27px; --result-token: 30px; }
+      .stage-title { font-size: 16px; }
+      .progress-label { font-size: 10px; }
+      .timebar { gap: 6px; }
+      .transport { gap: 4px; }
+      .clock { min-width: 34px; font-size: 10px; }
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { color-scheme: dark; --ink:#f0f2f6; --secondary:#abb4c3; --quiet:#828c9d; --rule:#3a4556; --hairline:#303a49; --surface:#151c28; --track:#303b4b; --pending-disc:#667386; }
+      .slot-index { color: #f0f2f6; }
+      .control:hover { background: #273244; }
+      .disc.is-completed { opacity: .48; }
+      .process-row.is-completed .progress-fill { opacity: .54; }
+      .scrub::-webkit-slider-runnable-track { background: linear-gradient(to right, #88afe5 0%, #88afe5 var(--percentage, 0%), var(--track) var(--percentage, 0%), var(--track) 100%); }
+      .scrub::-webkit-slider-thumb, .scrub::-moz-range-thumb { background: #88afe5; }
+    }
+  </style>
+</head>
+<body>
+  <main id="pipeline" class="pipeline" aria-label="Cascada concurrent product comparison demonstration">
+    <section class="stage stage-generate" aria-labelledby="generate-title">
+      <div class="stage-head">
+        <h2 class="stage-title" id="generate-title">Find the top 4 headphones, streaming each result</h2>
+      </div>
+      <div class="slot-grid" id="generate-grid"></div>
+    </section>
+    <section class="stage stage-process" aria-labelledby="process-title">
+      <div class="stage-head">
+        <h2 class="stage-title" id="process-title">Fetch specs, reviews and prices, then summarize</h2>
+      </div>
+      <div class="process-table">
+        <div id="process-rows"></div>
+      </div>
+    </section>
+    <section class="stage stage-results" aria-labelledby="results-title">
+      <div class="stage-head">
+        <h2 class="stage-title" id="results-title">Return summaries in the original order</h2>
+      </div>
+      <div class="slot-grid" id="results-grid"></div>
+    </section>
+    <footer class="timebar">
+      <div class="transport">
+        <span class="clock" id="clock" aria-label="Elapsed animation time">0.0s</span>
+        <button class="control" id="play-pause" type="button" aria-label="Pause animation" title="Pause animation"><svg aria-hidden="true" id="play-icon" viewBox="0 0 16 16"><path d="M3 2h4v12H3zm6 0h4v12H9z"/></svg><span id="play-label" class="control-label">Pause</span></button>
+        <button class="control" id="replay" type="button" aria-label="Replay animation" title="Replay animation"><svg aria-hidden="true" viewBox="0 0 16 16"><path d="M8 1.5a6.5 6.5 0 1 0 6.45 7.25h-1.8A4.75 4.75 0 1 1 8 3.25c1.38 0 2.64.59 3.5 1.53L9.3 7h5.2V1.8l-1.76 1.76A6.48 6.48 0 0 0 8 1.5Z"/></svg><span class="control-label">Replay</span></button>
+      </div>
+      <input class="scrub" id="scrub" type="range" min="0" max="1120" step="1" value="0" aria-label="Animation timeline: drag to view an earlier or later moment">
+      <output class="live-status" id="status" for="scrub" aria-label="Animation progress">0%</output>
+    </footer>
+    <div class="animation-layer" id="animation-layer" aria-hidden="true"></div>
+  </main>
+<script>
+(() => {
+  'use strict';
+  const icon = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.7 13.2v-2.1a7.3 7.3 0 0 1 14.6 0v2.1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><rect x="3.4" y="12" width="5.0" height="7.5" rx="1.4" fill="#fff"/><rect x="15.6" y="12" width="5.0" height="7.5" rx="1.4" fill="#fff"/></svg>`;
+  const products = [
+    { n:1, color:'#1659C1', generated:0.62, durations:[3.7,6.1,2.0,1.45] },
+    { n:2, color:'#C12332', generated:1.80, durations:[2.2,3.2,2.4,1.20] },
+    { n:3, color:'#137746', generated:2.95, durations:[1.35,1.7,1.15,1.00] },
+    { n:4, color:'#C98800', generated:4.15, durations:[1.4,2.15,1.5,1.00] }
+  ];
+  const transferInDelay = .17, inFlightDuration = .78;
+  const transferOutDelay = .12, outFlightDuration = .78;
+  const animationLength = 11.20, endHold = 2.1;
+  const pipeline = document.getElementById('pipeline');
+  const generateGrid = document.getElementById('generate-grid');
+  const processRows = document.getElementById('process-rows');
+  const resultsGrid = document.getElementById('results-grid');
+  const layer = document.getElementById('animation-layer');
+  const playPause = document.getElementById('play-pause');
+  const playLabel = document.getElementById('play-label');
+  const playIcon = document.getElementById('play-icon');
+  const replay = document.getElementById('replay');
+  const clock = document.getElementById('clock');
+  const status = document.getElementById('status');
+  const scrub = document.getElementById('scrub');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const PAUSE_SVG = '<path d="M3 2h4v12H3zm6 0h4v12H9z"/>';
+  const PLAY_SVG = '<path d="M4 1.5v13l10-6.5z"/>';
+
+  const disc = (color, className = 'disc') => {
+    const el = document.createElement('span');
+    el.className = className;
+    el.style.setProperty('--product-color', color);
+    el.innerHTML = icon;
+    return el;
+  };
+
+  for (const p of products) {
+    p.processTime = p.generated + transferInDelay + inFlightDuration;
+    p.summaryStart = p.processTime + Math.max(...p.durations.slice(0, 3));
+    p.summaryEnd = p.summaryStart + p.durations[3];
+    p.outStart = p.summaryEnd + transferOutDelay;
+    p.resultTime = p.outStart + outFlightDuration;
+
+    const genCell = document.createElement('div');
+    genCell.className = 'slot slot-generate';
+    genCell.innerHTML = `<span class="slot-index">${p.n}</span><div class="mount" id="generate-mount-${p.n}"></div>`;
+    generateGrid.appendChild(genCell);
+    p.genMount = genCell.querySelector('.mount');
+    p.genDisc = disc(p.color);
+    p.genMount.appendChild(p.genDisc);
+
+    const row = document.createElement('div');
+    row.className = 'process-row';
+    row.style.setProperty('--product-color', p.color);
+    row.setAttribute('aria-label', `Product ${p.n}: waiting to be processed`);
+    row.innerHTML = `<div class="mount process-mount"></div>`+
+      ['Specs', 'Reviews', 'Price', 'Summarize'].map(label => `<div class="progress-cell"><span class="progress-label">${label}</span><div class="progress-track" role="progressbar" aria-label="Product ${p.n}: ${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="progress-fill"></span></div></div>`).join('');
+    processRows.appendChild(row);
+    p.row = row;
+    p.processMount = row.querySelector('.process-mount');
+    p.processDisc = disc(p.color);
+    p.processMount.appendChild(p.processDisc);
+    p.barFills = [...row.querySelectorAll('.progress-fill')];
+    p.barTracks = [...row.querySelectorAll('.progress-track')];
+
+    const resultCell = document.createElement('div');
+    resultCell.className = 'slot slot-results result-slot';
+    resultCell.style.setProperty('--product-color', p.color);
+    resultCell.innerHTML = `<span class="slot-index">${p.n}</span><div class="mount mount-result"></div>`;
+    resultsGrid.appendChild(resultCell);
+    p.resultCell = resultCell;
+    p.resultMount = resultCell.querySelector('.mount');
+    p.resultDisc = disc(p.color);
+    p.resultMount.appendChild(p.resultDisc);
+
+    p.inFlight = disc(p.color, 'flying-disc');
+    p.outFlight = disc(p.color, 'flying-disc');
+    layer.appendChild(p.inFlight);
+    layer.appendChild(p.outFlight);
+  }
+
+  let t = reducedMotion ? animationLength : 0;
+  let playing = !reducedMotion;
+  let rate = 1.15; // 15% faster playback, with the same relative task timings.
+  let previousFrame = null;
+  let coordinates = [];
+
+  function center(node, root) {
+    const rect = node.getBoundingClientRect(), base = root.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2 - base.left,
+             y: rect.top + rect.height / 2 - base.top, size: rect.width };
+  }
+
+  function measure() {
+    coordinates = products.map(p => ({
+      generate: center(p.genMount, pipeline),
+      process: center(p.processMount, pipeline),
+      results: center(p.resultMount, pipeline)
+    }));
+    render(t);
+  }
+
+  const clamp = x => Math.max(0, Math.min(1, x));
+  const smooth = u => { u=clamp(u); return u*u*(3-2*u); };
+
+  function fly(el, start, end, current, startTime, duration, bend) {
+    const u = (current - startTime) / duration;
+    if (u < 0 || u >= 1 || !coordinates.length) { el.style.display = 'none'; return; }
+    const f = smooth(u);
+    const x = start.x + (end.x - start.x)*f;
+    const y = start.y + (end.y - start.y)*f - bend * Math.sin(Math.PI*f);
+    const size = start.size + (end.size - start.size)*f;
+    el.style.display = 'grid';
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+    el.style.transform = `translate3d(${x - size / 2}px, ${y - size / 2}px, 0)`;
+  }
+
+  function setVisible(node, yes) { node.style.visibility = yes ? 'visible' : 'hidden'; }
+
+  function render(time) {
+    t = Math.max(0, Math.min(animationLength + endHold, time));
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      const generated = t >= p.generated;
+      const processed = t >= p.processTime;
+      const inputCopyDeparted = t >= p.generated + transferInDelay;
+      const outputCopyDeparted = t >= p.outStart;
+      const finished = t >= p.resultTime;
+      // Gray headphone placeholders stay visible from the start,
+      // becoming coloured as each product appears in the stream.
+      setVisible(p.genDisc, true);
+      p.genDisc.classList.toggle('is-pending', !generated);
+      setVisible(p.processDisc, processed);
+      setVisible(p.resultDisc, finished);
+      p.row.classList.toggle('arrived', processed);
+      // Stationary originals become muted as soon as their moving copy departs.
+      p.row.classList.toggle('is-completed', outputCopyDeparted);
+      p.genDisc.classList.toggle('is-completed', inputCopyDeparted);
+      p.processDisc.classList.toggle('is-completed', outputCopyDeparted);
+      p.resultCell.classList.toggle('is-finished', finished);
+      p.row.setAttribute('aria-label', `Product ${p.n}: ${processed ? (t >= p.summaryEnd ? 'processing finished' : 'processing') : 'waiting to be processed'}`);
+
+      for (let j = 0; j < 4; j++) {
+        const beginsAt = j < 3 ? p.processTime : p.summaryStart;
+        const v = clamp((t - beginsAt) / p.durations[j]);
+        p.barFills[j].style.width = `${v*100}%`;
+        p.barTracks[j].setAttribute('aria-valuenow', String(Math.floor(v*100)));
+      }
+      if (coordinates.length) {
+        const c = coordinates[i];
+        fly(p.inFlight, c.generate, c.process, t, p.generated + transferInDelay, inFlightDuration, 10);
+        fly(p.outFlight, c.process, c.results, t, p.outStart, outFlightDuration, 10);
+      }
+    }
+    clock.textContent = `${Math.min(t,animationLength).toFixed(1)}s`;
+    const progressPercent = Math.round(Math.min(t, animationLength) / animationLength * 100);
+    status.textContent = `${progressPercent}%`;
+    scrub.value = String(Math.round(Math.min(t,animationLength)/animationLength*1120));
+    scrub.style.setProperty('--percentage', `${Math.min(t,animationLength)/animationLength*100}%`);
+  }
+
+  function updateButton() {
+    playIcon.innerHTML = playing ? PAUSE_SVG : PLAY_SVG;
+    playLabel.textContent = playing ? 'Pause' : 'Play';
+    playPause.setAttribute('aria-label', playing ? 'Pause animation' : 'Play animation');
+    playPause.title = playing ? 'Pause animation' : 'Play animation';
+  }
+
+  function tick(timestamp) {
+    if (previousFrame !== null && playing) {
+      t += Math.min((timestamp-previousFrame)/1000, .08)*rate;
+      if (t > animationLength + endHold) t = 0;
+      render(t);
+    }
+    previousFrame = timestamp;
+    requestAnimationFrame(tick);
+  }
+
+  playPause.addEventListener('click', () => {
+    if (!playing && t >= animationLength + endHold) t = 0;
+    playing = !playing;
+    updateButton();
+  });
+  replay.addEventListener('click', () => { t = 0; playing = true; render(t); updateButton(); });
+  scrub.addEventListener('input', () => {
+    playing = false;
+    render(Number(scrub.value)/1120*animationLength);
+    updateButton();
+  });
+  window.addEventListener('resize', measure);
+  if (window.ResizeObserver) new ResizeObserver(measure).observe(pipeline);
+  measure();
+  updateButton();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
