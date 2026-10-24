@@ -1,6 +1,22 @@
 # cascada.dev
 The Cascada web page
 
+## Homepage
+
+Run `npm run dev`, then open `http://localhost:3000`. No dependencies or build
+step are required. The development server binds to localhost only.
+
+The page is plain HTML, CSS and JavaScript. Publish `index.html`, `styles.css`,
+`main.js`, `logo.svg` and `headphones-animation.html` together on any static host.
+`docs/home.md` contains the original homepage copy. Navigation points to the
+existing tutorial and documentation; Playground is marked as coming soon until
+its URL is available.
+
+The concurrent-results example has Workflow and Code tabs, with the Code tab
+reusing the headphones script above. Code examples include copy icons when
+clipboard access is supported. The menu
+collapses on mobile, and all homepage text remains available without JavaScript.
+
 ## Logo
 
 `logo.svg` is a standalone vector asset with a 64 × 64 CSS-pixel default size.

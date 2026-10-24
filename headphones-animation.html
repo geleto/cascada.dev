@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Cascada · Streaming product comparisons</title>
+  <script>
+    if (window.parent !== window && new URLSearchParams(window.location.search).get('embedded') === '1') {
+      document.documentElement.classList.add('is-embedded');
+    }
+  </script>
   <style>
     :root {
       color-scheme: light;
@@ -42,6 +47,10 @@
     .slot { position: relative; display: flex; justify-content: center; align-items: center; min-width: 0; }
     .slot + .slot { border-left: 1px solid var(--hairline); }
     .slot-generate { height: 63px; }
+    .generation-track { position: relative; height: 6px; margin-top: 8px; background: var(--track); overflow: hidden; }
+    .generation-fill { display: block; width: 0; height: 100%; background: #000; }
+    .generation-ticks { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); pointer-events: none; }
+    .generation-ticks span + span { border-left: 1px solid var(--surface); }
     .slot-results { height: 63px; }
     .slot-index { position: absolute; top: 1px; left: 13px; color: #171c26; font: 550 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .mount { width: var(--token); height: var(--token); display: grid; place-items: center; flex: none; }
@@ -63,6 +72,7 @@
     .progress-track { width: 100%; height: 8px; background: var(--track); overflow: hidden; }
     .progress-fill { display: block; height: 100%; width: 0; background: var(--product-color); }
     .process-row:not(.arrived) .progress-cell { visibility: hidden; }
+    .process-row:not(.summary-ready) .progress-cell:last-child { visibility: hidden; }
     .stage-results { border-top: 1px solid var(--rule); }
     .result-slot { position: relative; }
     .result-slot.is-finished:after { content: ""; position: absolute; bottom: 1px; left: 50%; width: 15px; height: 2px; background: var(--product-color); transform: translateX(-50%); }
@@ -105,13 +115,13 @@
       .clock { min-width: 34px; font-size: 10px; }
     }
     @media (prefers-color-scheme: dark) {
-      :root { color-scheme: dark; --ink:#f0f2f6; --secondary:#abb4c3; --quiet:#828c9d; --rule:#3a4556; --hairline:#303a49; --surface:#151c28; --track:#303b4b; --pending-disc:#667386; }
-      .slot-index { color: #f0f2f6; }
-      .control:hover { background: #273244; }
-      .disc.is-completed { opacity: .48; }
-      .process-row.is-completed .progress-fill { opacity: .54; }
-      .scrub::-webkit-slider-runnable-track { background: linear-gradient(to right, #88afe5 0%, #88afe5 var(--percentage, 0%), var(--track) var(--percentage, 0%), var(--track) 100%); }
-      .scrub::-webkit-slider-thumb, .scrub::-moz-range-thumb { background: #88afe5; }
+      :root:not(.is-embedded) { color-scheme: dark; --ink:#f0f2f6; --secondary:#abb4c3; --quiet:#828c9d; --rule:#3a4556; --hairline:#303a49; --surface:#151c28; --track:#303b4b; --pending-disc:#667386; }
+      :root:not(.is-embedded) .slot-index { color: #f0f2f6; }
+      :root:not(.is-embedded) .control:hover { background: #273244; }
+      :root:not(.is-embedded) .disc.is-completed { opacity: .48; }
+      :root:not(.is-embedded) .process-row.is-completed .progress-fill { opacity: .54; }
+      :root:not(.is-embedded) .scrub::-webkit-slider-runnable-track { background: linear-gradient(to right, #88afe5 0%, #88afe5 var(--percentage, 0%), var(--track) var(--percentage, 0%), var(--track) 100%); }
+      :root:not(.is-embedded) .scrub::-webkit-slider-thumb, :root:not(.is-embedded) .scrub::-moz-range-thumb { background: #88afe5; }
     }
   </style>
 </head>
@@ -122,6 +132,10 @@
         <h2 class="stage-title" id="generate-title">Find the top 4 headphones, streaming each result</h2>
       </div>
       <div class="slot-grid" id="generate-grid"></div>
+      <div class="generation-track" id="generation-progress" role="progressbar" aria-label="Headphone generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span class="generation-fill" id="generation-fill"></span>
+        <div class="generation-ticks" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      </div>
     </section>
     <section class="stage stage-process" aria-labelledby="process-title">
       <div class="stage-head">
@@ -153,16 +167,18 @@
   'use strict';
   const icon = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.7 13.2v-2.1a7.3 7.3 0 0 1 14.6 0v2.1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><rect x="3.4" y="12" width="5.0" height="7.5" rx="1.4" fill="#fff"/><rect x="15.6" y="12" width="5.0" height="7.5" rx="1.4" fill="#fff"/></svg>`;
   const products = [
-    { n:1, color:'#1659C1', generated:0.62, durations:[3.7,6.1,2.0,1.45] },
-    { n:2, color:'#C12332', generated:1.80, durations:[2.2,3.2,2.4,1.20] },
-    { n:3, color:'#137746', generated:2.95, durations:[1.35,1.7,1.15,1.00] },
+    { n:1, color:'#164a9b', generated:0.62, durations:[3.7,6.1,2.0,1.45] },
+    { n:2, color:'#b44742', generated:1.80, durations:[2.2,3.2,2.4,1.20] },
+    { n:3, color:'#31674f', generated:2.95, durations:[1.35,1.7,1.15,1.00] },
     { n:4, color:'#C98800', generated:4.15, durations:[1.4,2.15,1.5,1.00] }
   ];
   const transferInDelay = .17, inFlightDuration = .78;
   const transferOutDelay = .12, outFlightDuration = .78;
-  const animationLength = 11.20, endHold = 2.1;
+  const endHold = 2.1;
   const pipeline = document.getElementById('pipeline');
   const generateGrid = document.getElementById('generate-grid');
+  const generationTrack = document.getElementById('generation-progress');
+  const generationFill = document.getElementById('generation-fill');
   const processRows = document.getElementById('process-rows');
   const resultsGrid = document.getElementById('results-grid');
   const layer = document.getElementById('animation-layer');
@@ -173,6 +189,7 @@
   const clock = document.getElementById('clock');
   const status = document.getElementById('status');
   const scrub = document.getElementById('scrub');
+  const embedded = document.documentElement.classList.contains('is-embedded');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const PAUSE_SVG = '<path d="M3 2h4v12H3zm6 0h4v12H9z"/>';
   const PLAY_SVG = '<path d="M4 1.5v13l10-6.5z"/>';
@@ -230,11 +247,15 @@
     layer.appendChild(p.outFlight);
   }
 
+  // Complete the timeline when the final result lands, then hold before looping.
+  const animationLength = Math.max(...products.map(p => p.resultTime));
   let t = reducedMotion ? animationLength : 0;
   let playing = !reducedMotion;
+  let visible = !embedded;
   let rate = 1.15; // 15% faster playback, with the same relative task timings.
   let previousFrame = null;
   let coordinates = [];
+  let reportedHeight = 0;
 
   function center(node, root) {
     const rect = node.getBoundingClientRect(), base = root.getBoundingClientRect();
@@ -249,6 +270,11 @@
       results: center(p.resultMount, pipeline)
     }));
     render(t);
+    const height = Math.ceil(pipeline.getBoundingClientRect().height);
+    if (embedded && height !== reportedHeight) {
+      reportedHeight = height;
+      window.parent.postMessage({ type: 'cascada:resize', height }, window.location.origin);
+    }
   }
 
   const clamp = x => Math.max(0, Math.min(1, x));
@@ -269,8 +295,24 @@
 
   function setVisible(node, yes) { node.style.visibility = yes ? 'visible' : 'hidden'; }
 
+  // Each quarter ends at the same instant its headphone arrives in the stream.
+  function generationProgress(time) {
+    let previousArrival = 0;
+    for (let i = 0; i < products.length; i++) {
+      const arrival = products[i].generated;
+      if (time < arrival) {
+        return (i + clamp((time - previousArrival) / (arrival - previousArrival))) / products.length;
+      }
+      previousArrival = arrival;
+    }
+    return 1;
+  }
+
   function render(time) {
     t = Math.max(0, Math.min(animationLength + endHold, time));
+    const generationPercent = generationProgress(t) * 100;
+    generationFill.style.width = `${generationPercent}%`;
+    generationTrack.setAttribute('aria-valuenow', String(Math.floor(generationPercent)));
     for (let i = 0; i < products.length; i++) {
       const p = products[i];
       const generated = t >= p.generated;
@@ -285,6 +327,7 @@
       setVisible(p.processDisc, processed);
       setVisible(p.resultDisc, finished);
       p.row.classList.toggle('arrived', processed);
+      p.row.classList.toggle('summary-ready', t >= p.summaryStart);
       // Stationary originals become muted as soon as their moving copy departs.
       p.row.classList.toggle('is-completed', outputCopyDeparted);
       p.genDisc.classList.toggle('is-completed', inputCopyDeparted);
@@ -305,9 +348,9 @@
       }
     }
     clock.textContent = `${Math.min(t,animationLength).toFixed(1)}s`;
-    const progressPercent = Math.round(Math.min(t, animationLength) / animationLength * 100);
+    const progressPercent = Math.floor(Math.min(t, animationLength) / animationLength * 100);
     status.textContent = `${progressPercent}%`;
-    scrub.value = String(Math.round(Math.min(t,animationLength)/animationLength*1120));
+    scrub.value = String(Math.floor(Math.min(t,animationLength)/animationLength*1120));
     scrub.style.setProperty('--percentage', `${Math.min(t,animationLength)/animationLength*100}%`);
   }
 
@@ -319,7 +362,7 @@
   }
 
   function tick(timestamp) {
-    if (previousFrame !== null && playing) {
+    if (previousFrame !== null && playing && visible) {
       t += Math.min((timestamp-previousFrame)/1000, .08)*rate;
       if (t > animationLength + endHold) t = 0;
       render(t);
@@ -339,6 +382,17 @@
     render(Number(scrub.value)/1120*animationLength);
     updateButton();
   });
+  if (embedded) {
+    window.addEventListener('message', event => {
+      if (event.source !== window.parent || event.origin !== window.location.origin) return;
+      if (event.data?.type !== 'cascada:visibility' || typeof event.data.visible !== 'boolean') return;
+      visible = event.data.visible;
+      previousFrame = null;
+      // The parent may have attached its resize listener after our first measurement.
+      reportedHeight = 0;
+      measure();
+    });
+  }
   window.addEventListener('resize', measure);
   if (window.ResizeObserver) new ResizeObserver(measure).observe(pipeline);
   measure();

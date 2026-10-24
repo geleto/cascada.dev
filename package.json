@@ -1,0 +1,13 @@
+{
+  "name": "cascada-dev",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Cascada homepage",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
