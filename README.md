@@ -12,6 +12,34 @@ The build clears old generated files first. No server-side runtime is needed.
 article images, feed, and homepage examples. Source files are not deployment
 artifacts. The feed is at `/feed.xml` and the sitemap at `/sitemap.xml`.
 
+### Publishing to OVHcloud
+
+Run `npm run publish` to build the site and upload **only `dist/`** to OVHcloud.
+This does not refresh the imported documentation; use `npm run docs:update`
+separately when you want to update those sources.
+
+Keep the hosting credentials in the local, Git-ignored `.env` file. On a new
+checkout, copy `.env.example` to `.env` and fill in the username and password.
+`OVH_FTP_REMOTE_DIR` must match the site's **Root folder** in OVHcloud's My sites
+or Multisite settings, commonly `www`, relative to the FTP login directory.
+The account home path, such as `/home/username`, is not itself the website
+directory. See [OVHcloud's root folder guide](https://docs.ovhcloud.com/en/guides/web-cloud/web-hosting/diagnostic-index-of).
+
+- `npm run publish -- --dry-run` builds and validates the upload contents and
+  settings locally, without connecting to OVHcloud.
+- `npm run publish -- --check` builds and checks the FTP login and existing
+  target directory without uploading or changing remote files.
+- `npm run publish` builds and uploads the site. Matching remote files are
+  overwritten; other remote files remain. Removed or renamed pages may need
+  separate cleanup on the server.
+
+`OVH_FTP_SECURE=true` requires explicit FTP-over-TLS. Set it to `false` only
+when using plain FTP, which sends credentials and files without encryption.
+The script never silently falls back from TLS to plain FTP. Login, directory,
+and transfer failures exit with an error; fix the issue and rerun the command.
+The target directory must already exist. `.env` files and symbolic links in
+the build output are rejected before connecting.
+
 ## Homepage and shared design
 
 `pages/index.md` mixes Markdown content with HTML wrappers for the homepage layout.
