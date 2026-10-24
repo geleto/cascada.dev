@@ -66,6 +66,8 @@ h1, h2, h3, h4, h5, h6 { color: var(--heading); }
 h1 { margin: 0 0 18px; font-size: clamp(64px, 7.5vw, 96px); line-height: 1.08; letter-spacing: -.055em; font-weight: 750; }
 .tagline { max-width: 1000px; margin: 0; font-size: clamp(25px, 2.8vw, 36px); line-height: 1.35; letter-spacing: -.026em; }
 .tagline strong { font-weight: 600; }
+.development-note { margin: 24px 0 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+.development-note a { color: var(--blue); }
 h2 { margin: 0 0 25px; font-size: clamp(30px, 3vw, 40px); line-height: 1.18; font-weight: 680; letter-spacing: -.036em; text-wrap: balance; }
 p { margin: 0 0 20px; }
 p:last-child { margin-bottom: 0; }

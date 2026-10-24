@@ -12,6 +12,9 @@ home: true
 **Concurrency-first scripting and templating<br class="desktop-break"> for JavaScript and TypeScript**
 {.tagline}
 
+**Cascada is in active development.** APIs and syntax may change. [Feedback](https://github.com/geleto/cascada/issues) and contributions are welcome.
+{.development-note}
+
 </div>
 </section>
 
