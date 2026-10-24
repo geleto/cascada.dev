@@ -1,4 +1,19 @@
-// Small progressive enhancements; all page content is available without JavaScript.
+// Small progressive enhancements for navigation, examples, and contact links.
+// Decode separate email parts in the browser; LinkedIn remains the static fallback.
+document.querySelectorAll('[data-email-user][data-email-domain]').forEach((placeholder) => {
+  let address;
+  try {
+    address = [atob(placeholder.dataset.emailUser), atob(placeholder.dataset.emailDomain)].join('@');
+  } catch {
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = `mailto:${address}`;
+  link.textContent = address;
+  placeholder.replaceChildren('email ', link, ' or ');
+  placeholder.hidden = false;
+});
+
 const siteHeader = document.querySelector('.site-header');
 const menuToggle = document.querySelector('.menu-toggle');
 const navigation = document.querySelector('#primary-nav');

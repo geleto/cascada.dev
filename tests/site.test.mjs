@@ -74,6 +74,17 @@ test('authored posts appear in the blog and feed, without the excluded imports',
   assert.equal(existsSync(join(output, 'README')), false);
 });
 
+test('the public contact address is absent from static pages and scripts', () => {
+  const address = ['info', 'cascada.dev'].join('@');
+  const scripts = readdirSync(output).filter((file) => file.endsWith('.js')).map((file) => join(output, file));
+  for (const path of [...pages, ...scripts]) {
+    assert.ok(!readFileSync(path, 'utf8').includes(address), `${path}: contact address exposed in plain text`);
+  }
+  const about = read('about/index.html');
+  assert.doesNotMatch(about, /href="mailto:/);
+  assert.match(about, /connect on <a href="https:\/\/www\.linkedin\.com\/in\/angel-popov\/">LinkedIn<\/a>/);
+});
+
 test('articles have no header images; the Kitchen Chef image is in its body', () => {
   for (const slug of posts) {
     const html = read(`posts/${slug}/index.html`);

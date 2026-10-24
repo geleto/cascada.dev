@@ -34,6 +34,13 @@ Edit `_data/site.json` to change the site URL or menu on every page. The Tutoria
 link points to the migrated introduction; Blog points to `/blog/`.
 Playground stays marked as coming soon.
 The AI with Casai link opens `/ai/`, a short Casai overview maintained in `pages/ai.md`.
+The footer links to `pages/about.md`. Its email username and domain are stored
+separately as Base64 in `data-email-user` and `data-email-domain`; `main.js`
+decodes them and creates the visible email and clickable link. Encode each part
+separately when changing the address. Without JavaScript, the contact sentence
+links to LinkedIn. This discourages basic harvesting; it does not keep the
+address secret from scrapers that decode it or run JavaScript.
+
 The header spans the viewport, with the brand at the left and navigation plus
 GitHub grouped at the right. Every page shows the Cascada name beside the logo.
 The header stays visible while scrolling: its outer spacing scrolls away until

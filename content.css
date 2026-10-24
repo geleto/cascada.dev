@@ -41,6 +41,10 @@
 .prose th { background: var(--light); font-weight: 650; }
 .article-footer { clear: both; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line); }
 .article-topics { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 13px; }
+.about-profile { display: grid; grid-template-columns: 160px minmax(0, 1fr); align-items: start; gap: 32px; }
+.about-profile > img { width: 160px; }
+.about-copy > :first-child { margin-top: 0; }
+.about-copy > :last-child { margin-bottom: 0; }
 @media (max-width: 620px) {
   .content-main { padding-block: 36px 52px; }
   .article-header { margin-bottom: 32px; }
@@ -48,4 +52,5 @@
   .prose pre { font-size: 12px; }
   .prose img[style*="float"] { float: none !important; margin: 24px auto !important; }
   .post-summary { padding-block: 28px; }
+  .about-profile { grid-template-columns: 1fr; gap: 24px; }
 }
