@@ -1,33 +1,9 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#b44742">
-  <meta name="description" content="Concurrency-first scripting and templating for JavaScript and TypeScript. Write familiar, sequential logic. Cascada handles the concurrency.">
-  <title>Cascada - Concurrency-first scripting and templating</title>
-  <link rel="icon" type="image/svg+xml" href="./logo.svg">
-  <link rel="stylesheet" href="./styles.css">
-  <script src="./main.js" defer></script>
-</head>
-<body id="top">
-  <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="home-link" href="./" aria-label="Cascada home"><span class="brand-mark" aria-hidden="true"></span></a>
-      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" hidden>Menu <span aria-hidden="true">☰</span></button>
-      <nav id="primary-nav" class="primary-nav" aria-label="Main navigation">
-        <a href="https://geleto.github.io/posts/cascada-script-intro/">Tutorial</a>
-        <a href="https://geleto.github.io/cascada-script/">CascadaScript Doc</a>
-        <a href="https://github.com/geleto/cascada/blob/master/docs/cascada/template.md">Template Doc</a>
-        <a href="https://github.com/geleto/casai">AI</a>
-        <span class="nav-upcoming">Playground <span class="coming-soon">Coming soon</span></span>
-      </nav>
-    </div>
-  </header>
+---
+layout: layouts/base.njk
+title: Cascada - Concurrency-first scripting and templating
+home: true
+---
 
-  <main id="main">
     <section class="hero" aria-labelledby="hero-title">
       <div class="container">
         <h1 id="hero-title">Cascada</h1>
@@ -40,7 +16,7 @@
         <h2 id="why-title">Why Cascada?</h2>
         <div class="why-copy">
           <p>Modern applications often spend much of their time waiting - fetching pages, calling web APIs, waiting for AI models to respond, querying databases… Operations often take seconds, even minutes.</p>
-          <p>Cascada runs these operations concurrently for you, inside your existing applications and AI agents. Orchestrate them with <strong>CascadaScript</strong>, a simple scripting language with familiar syntax, or generate prompts, HTML and other text with <strong>Cascada Template</strong>.</p>
+          <p>Cascada runs these operations concurrently for you, inside your existing applications and AI agents. Orchestrate them with <strong><a href="/cascada-script/">CascadaScript</a></strong>, a simple scripting language with familiar syntax, or generate prompts, HTML and other text with <strong><a href="/cascada-template/">Cascada Template</a></strong>.</p>
         </div>
       </div>
     </section>
@@ -48,9 +24,9 @@
     <section class="feature" aria-labelledby="simple-title">
       <div class="container feature-grid">
         <div class="feature-copy">
-          <h2 id="simple-title">Intentionally simple.</h2>
+          <h2 id="simple-title">Intentionally simple</h2>
           <p class="lead">Instantly familiar to JavaScript and Python developers.</p>
-          <p>Variables, functions, conditionals, loops - the building blocks you already know. CascadaScript keeps the syntax simple and puts the complexity in the execution engine, not in your code.</p>
+          <p>Variables, functions, conditionals, loops - the building blocks you already know. <a href="/cascada-script/">CascadaScript</a> keeps the syntax simple and puts the complexity in the execution engine, not in your code.</p>
         </div>
         <figure class="code-panel">
           <figcaption><span>CascadaScript</span><button class="copy-button" type="button" aria-label="Copy greeting example" hidden>Copy</button></figcaption>
@@ -71,13 +47,13 @@ endfor</code></pre>
     <section class="feature feature-tinted feature-reversed" aria-labelledby="concurrent-title">
       <div class="container feature-grid">
         <div class="feature-copy">
-          <h2 id="concurrent-title">Everything that can run concurrently, does.</h2>
+          <h2 id="concurrent-title">Everything that can run concurrently, does</h2>
           <p class="lead">Across statements, within expressions, inside function calls, at each loop iteration, across composed scripts…</p>
           <p>Every operation starts as soon as its inputs are ready, waiting only when it actually depends on another result.</p>
         </div>
         <figure class="code-panel">
           <figcaption><span>CascadaScript</span><button class="copy-button" type="button" aria-label="Copy concurrent workflow example" hidden>Copy</button></figcaption>
-          <pre tabindex="0" aria-label="Concurrent product comparison example"><code id="headphones-code" data-language="cascada">// Stream models as the search finds them
+          <pre tabindex="0" aria-label="Concurrent product comparison example"><code id="headphones-code" data-language="cascada">// Stream model names as strings
 var products = findProducts({
   productName: "headphones",
   count: 4
@@ -113,7 +89,7 @@ return summaries.snapshot()</code></pre>
     <section class="feature" aria-labelledby="results-title">
       <div class="container feature-grid">
         <div class="feature-copy">
-          <h2 id="results-title">Concurrent execution.<br> Sequential results.</h2>
+          <h2 id="results-title">Concurrent execution<br> Sequential results</h2>
           <p>Operations can run and finish out of order, but Cascada guarantees that their outputs are assembled exactly as if the script had run sequentially.</p>
           <p><strong>No <code>async</code>, no <code>await</code>, no manual orchestration.</strong> Just write your logic in the familiar, sequential style. Cascada handles the concurrency.</p>
           <div class="workflow-explanation">
@@ -147,7 +123,7 @@ return summaries.snapshot()</code></pre>
           <div id="code-panel" class="example-tabpanel" role="tabpanel" aria-labelledby="code-tab" tabindex="0" hidden>
             <figure class="code-panel">
               <figcaption><span>CascadaScript</span><button class="copy-button" type="button" aria-label="Copy headphones workflow example" hidden>Copy</button></figcaption>
-              <pre tabindex="0" aria-label="Headphones workflow code"><code data-language="cascada" data-code-source="headphones-code">// Stream models as the search finds them
+              <pre tabindex="0" aria-label="Headphones workflow code"><code data-language="cascada" data-code-source="headphones-code">// Stream model names as strings
 var products = findProducts({
   productName: "headphones",
   count: 4
@@ -185,7 +161,7 @@ return summaries.snapshot()</code></pre>
     <section class="feature feature-tinted feature-reversed" aria-labelledby="errors-title">
       <div class="container feature-grid">
         <div class="feature-copy">
-          <h2 id="errors-title">Errors flow like data.</h2>
+          <h2 id="errors-title">Errors flow like data</h2>
           <p class="lead">Errors don’t stop execution. They <em>poison</em> all variables that depend on them, while independent work continues unaffected.</p>
           <p><strong>The butterfly effect:</strong> Poison also spreads through control flow. When an <code>if</code> condition is poisoned, neither branch runs, and everything either branch can potentially write is poisoned. <strong>Repair early, before it spreads.</strong></p>
         </div>
@@ -206,7 +182,7 @@ endif</code></pre>
     <section class="feature" aria-labelledby="sequential-title">
       <div class="container feature-grid">
         <div class="feature-copy">
-          <h2 id="sequential-title">Sequential by exception.</h2>
+          <h2 id="sequential-title">Sequential by exception</h2>
           <p class="lead">Concurrency is the default, but sometimes order matters.</p>
           <ul class="feature-list">
             <li><code>db!.write(data)</code> - Add <code>!</code> to calls that modify external state, such as database writes, to run them in order.</li>
@@ -237,9 +213,9 @@ endfor</code></pre>
     <section class="feature feature-tinted feature-reversed" aria-labelledby="javascript-title">
       <div class="container feature-grid">
         <div class="feature-copy">
-          <h2 id="javascript-title">Built for JavaScript<br> and TypeScript.</h2>
+          <h2 id="javascript-title">Built for JavaScript<br> and TypeScript</h2>
           <p>Cascada works inside your existing applications, not as a replacement for JavaScript or TypeScript.</p>
-          <p>Use your existing functions, libraries, APIs, and services directly in CascadaScript. Organize complex workflows into reusable functions and scripts, then import and compose them into larger workflows.</p>
+          <p>Use your existing functions, libraries, APIs, and services directly in <a href="/cascada-script/">CascadaScript</a>. Organize complex workflows into reusable functions and scripts, then import and compose them into larger workflows.</p>
           <p><strong>Concurrency works across the entire composition</strong>, automatically managing dependencies between operations, functions, and scripts.</p>
         </div>
         <figure class="code-panel">
@@ -269,9 +245,9 @@ const result = await env.renderScriptString(`
     <section class="feature" aria-labelledby="templates-title">
       <div class="container feature-grid">
         <div class="feature-copy">
-          <h2 id="templates-title">Templates that<br> run concurrently.</h2>
-          <p><strong>Cascada Template</strong> brings the same engine to templates, using the popular Nunjucks syntax. Create AI prompts, HTML, emails, and more using familiar expressions, macros, conditionals, and loops.</p>
-          <p>Just like CascadaScript, <strong>everything that can run concurrently, does</strong> - even inside templates. Independent operations run in parallel, while the final output is assembled in the order you wrote it.</p>
+          <h2 id="templates-title">Templates that<br> run concurrently</h2>
+          <p><strong><a href="/cascada-template/">Cascada Template</a></strong> brings the same engine to templates, using the popular Nunjucks syntax. Create AI prompts, HTML, emails, and more using familiar expressions, macros, conditionals, and loops.</p>
+          <p>Just like <a href="/cascada-script/">CascadaScript</a>, <strong>everything that can run concurrently, does</strong> - even inside templates. Independent operations run in parallel, while the final output is assembled in the order you wrote it.</p>
         </div>
         <figure class="code-panel">
           <figcaption><span>Cascada Template</span><button class="copy-button" type="button" aria-label="Copy template example" hidden>Copy</button></figcaption>
@@ -287,10 +263,10 @@ const result = await env.renderScriptString(`
     <section id="casai" class="feature feature-tinted feature-reversed" aria-labelledby="casai-title">
       <div class="container feature-grid">
         <div class="feature-copy">
-          <h2 id="casai-title">Casai - Cascada for AI workflows.</h2>
-          <p class="lead">Build AI agents and workflows with Casai, a TypeScript library built on Cascada and the Vercel AI SDK, with all of Cascada’s concurrency features.</p>
-          <p>Compose model calls, tools, and structured outputs into reusable components. Define your workflows in CascadaScript and your prompts in Cascada templates.</p>
-          <p>The same headphones example shown above, now with Casai components. Explore the components, orchestration code, and workflow in motion.</p>
+          <h2 id="casai-title">Casai - Cascada for AI workflows</h2>
+          <p class="lead">Build AI agents and workflows with <a href="https://github.com/geleto/casai">Casai</a>, a TypeScript library built on Cascada and the Vercel AI SDK, with all of Cascada’s concurrency features.</p>
+          <p>Compose model calls, tools, and structured outputs into reusable components. Define your workflows in <a href="/cascada-script/">CascadaScript</a> and your prompts in <a href="/cascada-template/">Cascada templates</a>.</p>
+          <p>The same headphones example shown above, now with <a href="https://github.com/geleto/casai">Casai</a> components. Explore the components, orchestration code, and workflow in motion.</p>
           <p>The components stream headphone models, fetch specs, reviews, and prices from your product APIs, and generate a summary for each model.</p>
           <p><a href="https://github.com/geleto/casai">Explore Casai <span aria-hidden="true">→</span></a></p>
         </div>
@@ -315,14 +291,16 @@ const summarizeProduct =
   create.TextGenerator.withTemplate({
     model: openai('gpt-4o-mini'),
     inputSchema: z.object({
-      product: z.object({ name: z.string() }),
-      specs: z.record(z.string(), z.string()),
+      product: z.string(),
+      specs: z.record(
+        z.string(), z.string()
+      ),
       reviews: z.array(z.string()),
       price: z.number().nonnegative()
     }),
     prompt: `Summarize this headphone.
       Use only the supplied information.
-      Model: {{ product.name }}
+      Model: {{ product }}
       Specs: {{ specs | dump }}
       Reviews: {{ reviews | dump }}
       Price: {{ price | dump }}`
@@ -348,7 +326,7 @@ const summaries = await compare();</code></pre>
           <div id="casai-orchestration-panel" class="example-tabpanel" role="tabpanel" aria-labelledby="casai-orchestration-tab" tabindex="0" hidden>
             <figure class="code-panel">
               <figcaption><span>CascadaScript · headphones.csc</span><button class="copy-button" type="button" aria-label="Copy Casai orchestration example" hidden>Copy</button></figcaption>
-              <pre tabindex="0" aria-label="Casai orchestration example"><code data-language="cascada" data-code-source="headphones-code">// Stream models as the search finds them
+              <pre tabindex="0" aria-label="Casai orchestration example"><code data-language="cascada" data-code-source="headphones-code">// Stream model names as strings
 var products = findProducts({
   productName: "headphones",
   count: 4
@@ -387,17 +365,3 @@ return summaries.snapshot()</code></pre>
         </div>
       </div>
     </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <a class="footer-brand" href="./"><span class="brand-mark" aria-hidden="true"></span><span>Cascada</span></a>
-      <nav aria-label="Footer navigation">
-        <a href="https://github.com/geleto/cascada">GitHub <span aria-hidden="true">↗</span></a>
-        <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
-      </nav>
-    </div>
-  </footer>
-  <p id="copy-status" class="visually-hidden" role="status" aria-live="polite"></p>
-</body>
-</html>

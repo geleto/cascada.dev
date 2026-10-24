@@ -1,0 +1,3112 @@
+<p><a href="https://github.com/geleto/cascada">Cascada GitHub Project</a></p>
+<p><a href="/cascada-script/README.md">Download as Markdown</a></p>
+<p><a href="https://raw.githubusercontent.com/geleto/cascada/refs/heads/master/docs/cascada/cascada-agent.md">Markdown for AI Coding Agents - Script and Template syntax</a></p>
+<p>CascadaScript inverts the traditional programming model: it is concurrent by default, sequential only when explicitly asked. Everything runs at once - all statements, each part of every expression, every operation in each call, each iteration of every loop - an operation only waits when it depends on another's result. What makes it extraordinary is how ordinary the syntax looks - instantly familiar to any JavaScript or Python developer. And the result is identical to sequential execution.</p>
+<h2 id="cascadascript-implicitly-concurrent-explicitly-sequential" tabindex="-1">CascadaScript  -  Implicitly Concurrent, Explicitly Sequential</h2>
+<p>CascadaScript is a specialized scripting language designed for orchestrating complex asynchronous workflows in JavaScript and TypeScript applications. It is not a general-purpose programming language; instead, it acts as a data-orchestration layer for coordinating APIs, databases, LLMs, and other I/O-bound operations with maximum concurrency and minimal boilerplate.</p>
+<p>It uses familiar syntax and language constructs, while offering language-level support for boilerplate-free concurrent workflows, explicit control over side effects, deterministic output construction, and dataflow-based error handling with recovery rollbacks.</p>
+<p><strong>⚠️ Under active development:</strong> Cascada is evolving rapidly - bugs are possible. Issues and contributions are very welcome.</p>
+<p>The core execution model:</p>
+<ul>
+<li>⚡ <strong>Concurrent by default</strong>  -  Independent operations - variable assignments, function calls, loop iterations - execute concurrently without <code>async</code>, <code>await</code>, or promise management.</li>
+<li>🚦 <strong>Data-driven execution</strong>  -  Code runs automatically when its input data becomes available, eliminating race conditions by design.</li>
+<li>➡️ <strong>Explicit sequencing only when needed</strong>  -  Order specific calls, loops, or external interactions with dedicated language constructs - the rest of the script stays concurrent.</li>
+<li>📋 <strong>Deterministic outputs</strong>  -  Even though execution is concurrent and often out-of-order, Cascada guarantees that final outputs are assembled exactly as if the script ran sequentially.</li>
+<li>☣️ <strong>Errors are data</strong>  -  Failures propagate through the dataflow instead of throwing exceptions, allowing unrelated concurrent work to continue safely.</li>
+</ul>
+<p>CascadaScript is particularly well suited for:</p>
+<ul>
+<li>AI and LLM orchestration</li>
+<li>Data pipelines and ETL workflows</li>
+<li>Agent systems and planning patterns</li>
+<li>High-throughput I/O coordination</li>
+</ul>
+<p>In short, Cascada lets developers write clear, linear logic while the engine handles concurrent execution, ordering guarantees, and error propagation automatically.</p>
+<p>Despite executing concurrently by default, it reads exactly like the synchronous code you already write:</p>
+<pre><code class="language-javascript">var user  = fetchUser(userId)   // ┐ start immediately,
+var posts = fetchPosts(userId)  // ┘ run concurrently
+
+// evaluates as soon as 'user' resolves - posts may still be fetching
+var role = &quot;admin&quot; if user.isAdmin else &quot;member&quot;
+
+// for loop - every iteration runs concurrently
+data result  // writes are concurrent, output is assembled in source order
+for post in posts
+  var enriched = enrichPost(post)
+  result.posts.push({
+    title:  enriched.title | title,
+    status: &quot;published&quot; if enriched.isLive else &quot;draft&quot;
+  })
+endfor
+
+// ! makes these sequential with each other, without breaking concurrency with the rest
+db!.log(&quot;report&quot;, userId)
+db!.updateLastSeen(userId)
+
+return { name: user.name, role: role, posts: result.snapshot() }  // snapshot waits for all writes
+</code></pre>
+<p>Every construct above runs exactly as you'd read it - the engine orchestrates all the async concurrency.</p>
+<h2 id="read-first" tabindex="-1">Read First</h2>
+<p><strong>Articles:</strong></p>
+<ul>
+<li>
+<p><a href="/posts/cascada-script-intro/">CascadaScript Introduction</a> - An introduction to CascadaScript's syntax, features, and how it solves real async programming challenges</p>
+</li>
+<li>
+<p><a href="/posts/cascada-kitchen-chef/">The Kitchen Chef's Guide to Concurrent Programming with Cascada</a> - Understand how Cascada works through a restaurant analogy - no technical jargon, just cooks, ingredients, and a brilliant manager who makes concurrent execution feel as natural as following a recipe</p>
+</li>
+</ul>
+<p><strong>Learning by Example:</strong></p>
+<ul>
+<li><a href="https://github.com/geleto/casai-examples">Casai Examples Repository</a> - Explore practical examples showing how Cascada and Casai (an AI orchestration framework built on Cascada) turn complex agentic workflows into readable, linear code - no visual node graphs or async spaghetti, just clear logic that tells a story (work in progress)</li>
+</ul>
+<h2 id="table-of-contents" tabindex="-1">Table of Contents</h2>
+<ul>
+<li><a href="#quick-start">Quick Start</a></li>
+<li><a href="#cascadas-execution-model">Cascada's Execution Model</a></li>
+<li><a href="#language-fundamentals">Language Fundamentals</a></li>
+<li><a href="#control-flow">Control Flow</a></li>
+<li><a href="#channels">Channels</a></li>
+<li><a href="#sequencing-external-interactions">Sequencing External Interactions</a></li>
+<li><a href="#functions-and-reusable-components">Functions and Reusable Components</a></li>
+<li><a href="#error-handling">Error Handling</a></li>
+<li><a href="#return-statements">Return Statements</a></li>
+<li><a href="#composition-and-loading">Composition and Loading</a></li>
+<li><a href="#api-reference">API Reference</a></li>
+<li><a href="#development-status-and-roadmap">Development Status and Roadmap</a></li>
+</ul>
+<h2 id="quick-start" tabindex="-1">Quick Start</h2>
+<pre><code class="language-bash">npm install cascada-engine
+</code></pre>
+<h3 id="the-script" tabindex="-1">The script</h3>
+<p>Write plain, familiar logic. Cascada runs independent operations concurrently:</p>
+<pre><code class="language-javascript">const script = `
+  var user  = fetchUser(userId)
+  var posts = fetchPosts(userId)
+
+  return {
+    name:      user.name,
+    postCount: posts.length
+  }
+`;
+</code></pre>
+<p>No <code>async</code>, no <code>await</code>. <code>fetchUser</code> and <code>fetchPosts</code> run concurrently - Cascada handles it.</p>
+<h3 id="running-a-script" tabindex="-1">Running a script</h3>
+<p>Pass the script and a context object to <code>renderScriptString</code>. Any value in the context can be a promise or an async function:</p>
+<pre><code class="language-javascript">import { AsyncEnvironment } from 'cascada-engine';
+
+const env = new AsyncEnvironment();
+
+const result = await env.renderScriptString(script, {
+  userId:    123,
+  fetchUser: (id) =&gt; db.users.findById(id),
+  fetchPosts: (id) =&gt; db.posts.findByUser(id)
+});
+
+console.log(result);
+// { name: 'Alice', postCount: 5 }
+</code></pre>
+<p>To understand how Cascada achieves effortless concurrency, read the next section.</p>
+<h2 id="cascadas-execution-model" tabindex="-1">Cascada's Execution Model</h2>
+<p>Cascada's approach to concurrency inverts the traditional programming model. Understanding this execution model is essential to writing effective CascadaScripts - it explains why the language behaves the way it does and how to leverage its concurrency.</p>
+<h4 id="concurrent-by-default" tabindex="-1">Concurrent by default</h4>
+<p>Cascada fundamentally inverts the traditional programming model: instead of being sequential by default, Cascada is concurrent by default. Independent variable assignments, function calls, loop iterations, and function invocations all run concurrently - no special syntax required.</p>
+<h4 id="data-driven-flow-code-runs-when-its-inputs-are-ready" tabindex="-1">Data-Driven Flow: Code runs when its inputs are ready.</h4>
+<p>In Cascada, any independent operations - like API calls, LLM requests, and database queries - are automatically executed concurrently without requiring special constructs or even the <code>await</code> keyword. The engine intelligently analyzes your script's data dependencies, guaranteeing that operations will wait for their required inputs before executing. This applies to all constructs: expressions evaluate as soon as their operands resolve, conditionals wait for their condition, loops wait for their iterable, and function calls wait for their arguments. This orchestration eliminates the possibility of race conditions by design, ensuring correct execution order while maximizing performance for I/O-bound workflows.</p>
+<h4 id="implicit-concurrency-write-business-logic-not-async-plumbing" tabindex="-1">Implicit Concurrency: Write Business Logic, Not Async Plumbing.</h4>
+<p>Forget await. Forget .then(). Forget manually tracking which variables are promises and which are not. Cascada fundamentally changes how you interact with asynchronous operations by making them invisible.
+This &quot;just works&quot; approach means that while any variable can be a promise under the hood, you can pass it into functions, use it in expressions, and assign it without ever thinking about its asynchronous state.</p>
+<h4 id="implicitly-concurrent-explicitly-sequential" tabindex="-1">Implicitly Concurrent, Explicitly Sequential</h4>
+<p>While this &quot;concurrency-first&quot; approach is powerful, some operations still need to run in a specific order. Cascada can order its own internal work automatically, including data/text channel assembly and dependencies between script expressions. The hard case is imported native functions and objects from the render context: APIs, mutable object methods, database handles, file writers, LLM clients, and helpers that read or change shared state. Cascada cannot know whether those functions are pure or side-effectful, so you mark the ordering explicitly.</p>
+<p>For these cases you have three tools: the <code>!</code> marker, which enforces strict sequential order on a specific context-object path (such as database writes or stateful API calls); the <code>each</code> loop, which iterates a collection one item at a time when per-item side-effects must not overlap; and the <code>sequence</code> construct, which provides a named sequence object for strictly ordered reads and calls on an external context object while still returning each call's value. All three are surgical - they sequence only what they touch, without affecting the concurrency of the rest of the script.</p>
+<h4 id="execution-is-chaotic-but-the-result-is-orderly" tabindex="-1">Execution is chaotic, but the result is orderly</h4>
+<p>While independent operations run concurrently and may start and complete in any order, Cascada guarantees the final output is identical to what you'd get from sequential execution. This means all your data manipulations are applied predictably, ensuring your final texts, arrays and objects are assembled in the exact order written in your script.</p>
+<h4 id="dataflow-poisoning-errors-that-flow-like-data" tabindex="-1">Dataflow Poisoning - Errors that flow like data</h4>
+<p>Cascada replaces traditional try/catch exceptions with a data-centric error model called dataflow poisoning. If an operation fails, it produces an <code>Error Value</code> that propagates to any dependent operation, variable and output - ensuring corrupted data never silently produces incorrect results. For example, if fetchPosts() fails, any variable or output using its result also becomes an error - but critically, unrelated operations continue running unaffected. Poisoning is conservative with control flow: if an <code>if</code> condition is an Error Value, neither branch runs and every variable that either branch would have modified becomes poisoned. You can detect and repair these errors using <code>is error</code> checks, providing fallbacks and logging without derailing your entire workflow.</p>
+<h4 id="clean-expressive-syntax" tabindex="-1">Clean, Expressive Syntax</h4>
+<p>CascadaScript offers a modern, expressive syntax designed to be instantly familiar to JavaScript and TypeScript developers. It provides a complete toolset for writing sophisticated logic, including variable declarations (<code>var</code>), <code>if/else</code> conditionals, <code>for/while</code> loops, and a full suite of standard operators. Build reusable components with <code>function</code>, which supports default values and keyword arguments, and compose complex applications by organizing your code into modular files with <code>import</code> and <code>extends</code>.</p>
+<h2 id="language-fundamentals" tabindex="-1">Language Fundamentals</h2>
+<h3 id="features-at-a-glance" tabindex="-1">Features at a Glance</h3>
+<p>What makes CascadaScript remarkable is how unremarkable it looks. Despite executing concurrently by default, the language offers the same familiar constructs found in Python, JavaScript, and similar languages - but without the async keyword, no callbacks, no promise chains. You write straightforward sequential-looking logic, the engine handles the concurrency.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Syntax</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Variable declaration</td>
+<td><code>var name = value</code></td>
+<td>Always declare before use with <code>var</code></td>
+</tr>
+<tr>
+<td>Assignment</td>
+<td><code>name = value</code>, <code>obj.prop = value</code></td>
+<td>Assign or reassign a variable or property to a new value</td>
+</tr>
+<tr>
+<td>Arithmetic</td>
+<td><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>//</code>, <code>%</code>, <code>**</code></td>
+<td><code>+</code> also concatenates <code>string + string</code>; <code>//</code> is integer division, <code>**</code> is exponentiation</td>
+</tr>
+<tr>
+<td>Comparisons</td>
+<td><code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>===</code></td>
+<td>Standard comparisons</td>
+</tr>
+<tr>
+<td>Logic</td>
+<td><code>and</code>, <code>or</code>, <code>not</code></td>
+<td>Word-form boolean operators</td>
+</tr>
+<tr>
+<td>Strings</td>
+<td><code>&quot;text&quot;</code>, <code>'text'</code></td>
+<td><code>+</code> concatenates two strings; <code>~</code> explicitly stringifies text-like values</td>
+</tr>
+<tr>
+<td>Arrays</td>
+<td><code>[1, 2, 3]</code></td>
+<td>Array literals</td>
+</tr>
+<tr>
+<td>Objects / dicts</td>
+<td><code>{key: &quot;value&quot;}</code></td>
+<td>Object literals</td>
+</tr>
+<tr>
+<td>Expressions</td>
+<td><code>obj.prop</code>, <code>arr[i]</code>, <code>2*x + 1</code></td>
+<td>Member access, indexing, compound expressions; any expression is a valid standalone statement</td>
+</tr>
+<tr>
+<td>Inline if (ternary)</td>
+<td><code>a if condition else b</code></td>
+<td>Python-style conditional expression</td>
+</tr>
+<tr>
+<td>Conditionals</td>
+<td><code>if / elif / else / endif</code></td>
+<td>Standard branching</td>
+</tr>
+<tr>
+<td>Switch</td>
+<td><code>switch / case / default / endswitch</code></td>
+<td>Multi-way branching</td>
+</tr>
+<tr>
+<td>Concurrent loop</td>
+<td><code>for item in array</code>, <code>for key, value in object</code>, <code>for element in iterator</code></td>
+<td>Iterations run concurrently</td>
+</tr>
+<tr>
+<td>Sequential loop</td>
+<td><code>each item in list / endeach</code></td>
+<td>Iterations run in strict order</td>
+</tr>
+<tr>
+<td>While loop</td>
+<td><code>while condition / endwhile</code></td>
+<td>Condition-based loop</td>
+</tr>
+<tr>
+<td>Filters</td>
+<td><code>value | filterName(args)</code></td>
+<td>Transform values with built-in or custom filters</td>
+</tr>
+<tr>
+<td>Function calls</td>
+<td><code>funcName(a, b)</code></td>
+<td>Call script functions, context functions, globals, or inherited methods</td>
+</tr>
+<tr>
+<td>Functions</td>
+<td><code>function name(arg, optional=&quot;x&quot;) ... endfunction</code></td>
+<td>Define reusable callable functions; supports default values and keyword arguments</td>
+</tr>
+<tr>
+<td>Methods</td>
+<td><code>method name(args) … endmethod</code></td>
+<td>Define overridable, value-returning methods for <code>extends</code> chains</td>
+</tr>
+<tr>
+<td>Imports</td>
+<td><code>import &quot;file&quot; as ns</code>, <code>from &quot;file&quot; import name</code></td>
+<td>Import a namespace or specific functions from another script</td>
+</tr>
+<tr>
+<td>Comments</td>
+<td><code>// line</code>, <code>/* block */</code></td>
+<td>Standard comment syntax</td>
+</tr>
+</tbody>
+</table>
+<p>Everything above is the language you already know. Cascada adds a small set of simple purpose-built constructs on top:</p>
+<table>
+<thead>
+<tr>
+<th>Cascada Feature</th>
+<th>Syntax</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Implicit concurrency</td>
+<td><em>(no syntax)</em></td>
+<td>Independent operations run concurrently automatically</td>
+</tr>
+<tr>
+<td><code>text</code> channel</td>
+<td><code>text log</code>, <code>log(&quot;line&quot;)</code></td>
+<td>Generate text from concurrent code, assembled in source order</td>
+</tr>
+<tr>
+<td><code>data</code> channel</td>
+<td><code>data out</code>, <code>out.items.push(item)</code></td>
+<td>Build structured objects and arrays from concurrent code - writes are concurrent, result is in source order</td>
+</tr>
+<tr>
+<td><code>sequence</code> construct</td>
+<td><code>sequence db = services.db</code>, <code>var user = db.getUser(1)</code></td>
+<td>Create a named sequence object for sequential reads and calls on an external object</td>
+</tr>
+<tr>
+<td>Sequential operator</td>
+<td><code>obj!.method()</code>, <code>obj!.prop</code></td>
+<td>Enforce strict execution order on a context object path</td>
+</tr>
+<tr>
+<td>Guard</td>
+<td><code>guard [targets] / recover [err] / endguard</code></td>
+<td>Transaction-like block: auto-restores state on error</td>
+</tr>
+<tr>
+<td>Dataflow error poisoning</td>
+<td><code>value is error</code>, <code>value#message</code></td>
+<td>Failures propagate as error values through the dataflow; unrelated operations continue unaffected. If a control-flow condition is an error, all writes that would have happened in the skipped branches become poisoned too. Detect with <code>is error</code>, inspect with <code>#</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="core-syntax-and-expressions" tabindex="-1">Core Syntax and Expressions</h3>
+<ul>
+<li><strong>Multiline Expressions</strong>: Expressions can span multiple lines for readability. The system automatically detects continuation based on syntax (e.g., unclosed operators, brackets, or parentheses). For example:<pre><code>var result = 5 + 10 *
+  20 - 3
+</code></pre>
+</li>
+<li><strong>Standard Comments</strong>: Use JavaScript-style comments (<code>//</code> and <code>/* */</code>)</li>
+<li><strong>Code</strong>: Any standalone line that isn't a recognized command (e.g., <code>var</code>, <code>if</code>, <code>for</code>, <code>import</code>) or tag is treated as an expression. For example:<pre><code>computeTotal(items, tax)
+</code></pre>
+</li>
+</ul>
+<h3 id="variable-declaration-and-assignment" tabindex="-1">Variable Declaration and Assignment</h3>
+<p>CascadaScript uses a strict and explicit variable handling model that separates declaration from assignment for better clarity and safety.</p>
+<h4 id="declaring-local-variables-with-var" tabindex="-1">Declaring Local Variables with <code>var</code></h4>
+<p>Use <code>var</code> to declare a new, script-local variable. Re-declaring a variable that already exists in a visible scope will cause a compile-time error. If no initial value is provided, the variable defaults to <code>none</code>.</p>
+<p>This rule applies to all declaration-producing binders, not just <code>var</code> - including loop targets, call-block parameters, <code>import</code>/<code>from import</code> names, component aliases, and <code>recover</code> bindings.</p>
+<p>Identifier names may contain letters, digits, and <code>_</code>, and must not contain <code>$</code>. The <code>$</code> character is reserved for compiler-generated internal names.</p>
+<pre><code class="language-javascript">// Declare and initialize a variable
+var user = fetchUser(1)
+
+// Declare a variable, which defaults to `none`
+var report
+
+// Declare multiple variables and assign them a single value
+var x, y = 100
+</code></pre>
+<h4 id="variable-assignment-and-value-semantics" tabindex="-1">Variable Assignment and Value Semantics</h4>
+<p>Use the <code>=</code> operator to assign or reassign a variable to a new value. Using <code>=</code> on an undeclared variable will cause a compile-time error.</p>
+<pre><code class="language-javascript">var name = &quot;Alice&quot;
+name = &quot;Bob&quot; // OK: Re-assigning a declared variable
+
+// Re-assign multiple existing variables at once
+x, y = 200 // OK, if x and y were previously declared
+
+// ERROR: 'username' was never declared with 'var'
+username = &quot;Charlie&quot;
+</code></pre>
+<p><strong>Object and Array Composition</strong></p>
+<p>You can compose new objects and arrays directly in assignments by using object and array literals. This is the normal way to build up a fresh value from existing variables and expressions.</p>
+<pre><code class="language-javascript">var fullName = user.firstName + &quot; &quot; + user.lastName
+var profile = {
+  id: user.id,
+  name: fullName,
+  active: true
+}
+
+var summary = [user.id, fullName, role]
+</code></pre>
+<p>Object literal keys are always explicit. CascadaScript does not support JavaScript object-property shorthand, so write <code>{ name: name }</code>, not <code>{ name }</code>.</p>
+<p>This works especially well when you want to create a new value instead of mutating an existing one.</p>
+<p><strong>Assignment creates an independent copy.</strong> Objects and arrays are deep copied, not shared by reference.</p>
+<pre><code class="language-javascript">var a = {x: 1, y: 2}
+var b = a              // b receives a deep copy
+a.x = 10
+b.x  // 1 - b is independent
+
+var nums = [1, 2, 3]
+var copy = nums        // copy receives a deep copy
+nums[0] = 99
+copy[0]  // 1 - copy is independent
+</code></pre>
+<p>This ensures concurrent operations never interfere-each variable owns its data independently.</p>
+<p><strong>Performance Note</strong></p>
+<p>Cascada uses optimized techniques so that assignments do not copy entire objects. Objects may be shared internally until modified, at which point only the affected parts are copied as needed. This keeps memory usage and performance overhead low while preserving the simple independent value semantics shown in the examples.</p>
+<p><strong>Property Assignment</strong></p>
+<p>You can directly assign to object properties and array elements:</p>
+<pre><code class="language-javascript">var point = {x: 1, y: 2}
+point.x = 10
+
+var items = [1, 2, 3]
+items[0] = 100
+</code></pre>
+<p>When you assign an async value to a property, code that reads that property waits for the value to resolve:</p>
+<pre><code class="language-javascript">var point = {x: 1, y: 2}
+point.x = slowApiCall()
+return {
+  x: point.x,  // waits because this value is being read
+  y: point.y   // no wait needed - point.y is already resolved
+}
+</code></pre>
+<p><strong>Note:</strong> Property Assignment is a script-only feature and is not available in the Cascada template language.</p>
+<h4 id="mutation-methods-and-side-effects" tabindex="-1">Mutation Methods and Side Effects</h4>
+<p>Direct assignment (<code>=</code> and property <code>=</code>) is the safe, idiomatic way to update values in Cascada. Mutation methods - methods that modify an existing value in-place rather than producing a new one - need more care. The main unsafe cases are the familiar JavaScript array mutators: <code>.push()</code>, <code>.pop()</code>, <code>.shift()</code>, <code>.unshift()</code>, <code>.splice()</code>, <code>.sort()</code>, <code>.reverse()</code>, <code>.fill()</code>, and <code>.copyWithin()</code>. Treat similar in-place methods on custom objects the same way: they are side effects in exactly the same sense as writing to a database or calling a stateful external service.</p>
+<p>The problem is not &quot;methods are always forbidden&quot;. The problem is concurrent mutation of the same value. If only one execution path is mutating a local value, ordinary JavaScript methods like <code>items.push(x)</code> are fine. But when concurrent branches can touch the same <code>var</code>, these methods become race-prone.</p>
+<p>Calling a mutation method on a plain <code>var</code> inside a concurrent <code>for</code> loop is unsafe - iterations run concurrently, so whichever branch finishes last wins and source-code order is not preserved:</p>
+<pre><code class="language-javascript">// UNSAFE - concurrent iterations race on the same var
+var items = []
+for id in ids
+  items.push(fetchItem(id))  // order not guaranteed
+endfor
+</code></pre>
+<p>If you truly do not care about preserving source order, a plain mutable <code>var</code> may still be acceptable in non-concurrent code paths. But when multiple concurrent branches build a collection, do not mutate one shared <code>var</code> from all branches. Use one of these ordering tools instead:</p>
+<ul>
+<li>Use a <code>data</code> channel when concurrent branches are assembling an array or object and the final value should be deterministic.</li>
+<li>Use an <code>each</code> loop when every iteration must finish before the next one starts.</li>
+<li>Use the <code>!</code> operator when the thing being mutated is a stateful object from the render context, such as a database handle, queue, file writer, or other external service.</li>
+</ul>
+<p><strong><code>data</code> channel (preferred for building collections)</strong> - this is the main mitigation. Writes run concurrently, but the assembled result always matches source-code order:</p>
+<pre><code class="language-javascript">data result
+for id in ids
+  var item = fetchItem(id)
+  result.items.push(item)
+endfor
+return result.snapshot()
+</code></pre>
+<p>Use the <code>data</code> channel when you are assembling arrays or objects from concurrent code, whether order matters strictly or you just want to avoid shared-mutation races entirely.</p>
+<p><strong><code>each</code> loop (sequential iteration)</strong> - runs one iteration at a time, making mutation methods on a plain <code>var</code> safe:</p>
+<pre><code class="language-javascript">var items = []
+each id in ids
+  items.push(fetchItem(id))  // safe: each iteration completes before the next starts
+endeach
+</code></pre>
+<p><strong><code>!</code> operator (for context objects)</strong> - serializes calls on an object from the script context; see <a href="#sequential-execution-with">Sequential Execution with <code>!</code></a>:</p>
+<pre><code class="language-javascript">// 'collection' is a context object
+for id in ids
+  collection!.push(fetchItem(id))  // sequential; rest of the loop still runs concurrently
+endfor
+</code></pre>
+<p><strong>Scoping: No Shadowing of Visible Names</strong></p>
+<p>You cannot declare a variable in an inner scope (e.g., inside a <code>for</code> loop or <code>if</code> block) if a variable with the same name is already declared in an outer scope. This prevents accidental overwrites in concurrent execution.</p>
+<pre><code class="language-javascript">var item = &quot;parent&quot;
+for i in range(2)
+  // ERROR: 'item' is already declared in the outer scope.
+  var item = &quot;child &quot; + i
+endfor
+</code></pre>
+<p>Functions create clean scopes: their parameters and body cannot see outer local declarations, so they may freely reuse outer names.</p>
+<pre><code class="language-javascript">var item = &quot;parent&quot;
+function render(item)
+  return item  // OK: function scope is clean
+endfunction
+</code></pre>
+<p>Variables declared inside control-flow blocks (<code>if</code>, <code>for</code>, <code>switch</code>, etc.) are local to that block and are not visible outside it.</p>
+<pre><code class="language-javascript">if condition
+  var local = &quot;only visible here&quot;
+endif
+// ERROR: 'local' is not defined here
+</code></pre>
+<p>To use a value both inside and outside a block, declare it in the outer scope first:</p>
+<pre><code class="language-javascript">var status = &quot;default&quot;
+if condition
+  status = &quot;updated&quot;  // assigns to the outer variable
+endif
+// 'status' is visible and possibly updated here
+</code></pre>
+<p><strong>Handling <code>none</code> (null)</strong></p>
+<p>The keyword <code>none</code> represents <code>null</code> in CascadaScript. Accessing a property on <code>none</code> produces an <code>Error Value</code>, so any dependent expression or assignment becomes poisoned. Variables declared without an initial value default to <code>none</code>:</p>
+<pre><code class="language-javascript">var report  // defaults to none (null)
+
+var title = report.title   // title becomes an Error Value
+return title               // returning it makes the script fail
+</code></pre>
+<p>Accessing a missing property on a scalar primitive such as a number or boolean also produces an <code>Error Value</code>. Optional object, array, and string reads remain lenient:</p>
+<pre><code class="language-javascript">var bad = (5).missing      // Error Value
+var ok1 = obj.missing      // undefined
+var ok2 = items[10]        // undefined
+var ok3 = &quot;abc&quot;[9]         // undefined
+</code></pre>
+<h3 id="the-context-object" tabindex="-1">The Context Object</h3>
+<p>The context is the plain JavaScript object you pass when running a script. It is how you inject external data, functions, and services into Cascada:</p>
+<pre><code class="language-javascript">const result = await env.renderScriptString(script, {
+  userId: 123,
+  fetchUser: (id) =&gt; db.users.findById(id),
+  db: myDatabase
+});
+</code></pre>
+<p>Inside the script, context properties are accessed by name just like any other variable:</p>
+<pre><code class="language-javascript">var user = fetchUser(userId)
+return user.name
+</code></pre>
+<p><strong>Context values are read-only unless you first copy them into a local <code>var</code>:</strong> you cannot modify a context path directly in script code. When you assign a context property to a <code>var</code>, you get an independent copy, so later changes to that variable do not affect the original context object.</p>
+<pre><code class="language-javascript">appConfig.debug = true      // ERROR: cannot modify context directly
+
+var config = appConfig      // local copy
+config.debug = true
+// appConfig is unchanged
+</code></pre>
+<h3 id="literals-operators-and-expressions" tabindex="-1">Literals, Operators, and Expressions</h3>
+<p>CascadaScript supports a wide range of expressions, similar to JavaScript.</p>
+<h4 id="literals" tabindex="-1">Literals</h4>
+<p>You can use standard literals for common data types:</p>
+<ul>
+<li><strong>Strings</strong>: <code>&quot;Hello&quot;</code>, <code>'World'</code></li>
+<li><strong>Numbers</strong>: <code>42</code>, <code>3.14159</code></li>
+<li><strong>Arrays</strong>: <code>[1, &quot;apple&quot;, true]</code></li>
+<li><strong>Dicts (Objects)</strong>: <code>{ key: &quot;value&quot;, &quot;another-key&quot;: 100 }</code>; keys must be explicit (<code>{ name: name }</code>, not <code>{ name }</code>)</li>
+<li><strong>Booleans</strong>: <code>true</code>, <code>false</code></li>
+</ul>
+<h4 id="math" tabindex="-1">Math</h4>
+<p>All standard mathematical operators are available:
+<code>+</code> (addition), <code>-</code> (subtraction), <code>*</code> (multiplication), <code>/</code> (division), <code>//</code> (integer division), <code>%</code> (remainder), <code>**</code> (power).
+Operands must be numeric in scripts, except that <code>+</code> also supports <code>string + string</code>.
+Mixed coercions such as <code>&quot;5&quot; + 3</code>, <code>&quot;x&quot; + null</code>, and <code>&quot;5&quot; * 2</code> produce an Error Value of <a href="#the-kind-property">kind</a> <a href="#the-kind-property"><code>IncompatibleOperands</code></a>; use <code>~</code> for explicit text concatenation and <code>| int</code> / <code>| float</code> for numeric conversion.
+Floating-point division by zero follows JavaScript (<code>5 / 0</code> is <code>Infinity</code>), while <code>5 % 0</code> produces <a href="#the-kind-property"><code>NaNResult</code></a> and BigInt division or modulo by zero produces <a href="#the-kind-property"><code>DivideByZero</code></a>.</p>
+<pre><code class="language-javascript">var price = (item.cost + shipping) * 1.05
+</code></pre>
+<h4 id="comparisons-and-logic" tabindex="-1">Comparisons and Logic</h4>
+<p>Standard comparison (<code>==</code>, <code>!=</code>, <code>===</code>, <code>!==</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;</code>, <code>&lt;=</code>) and logic (<code>and</code>, <code>or</code>, <code>not</code>) operators are used for conditional logic.
+In scripts, <code>==</code> and <code>!=</code> are strict (<code>===</code> / <code>!==</code>), ordering compares only number-with-number or string-with-string, and <code>in</code> requires a collection.</p>
+<pre><code class="language-javascript">if (user.role == &quot;Admin&quot; and not user.isSuspended) or user.isOwner
+  // ... grant access
+endif
+</code></pre>
+<p>Cascada also provides a rich, data-centric error handling model. You can test if a variable contains a failure using the <code>is error</code> test. For more details, see <a href="#error-handling">Error Handling</a>.</p>
+<h4 id="inline-if-expressions" tabindex="-1">Inline <code>if</code> Expressions</h4>
+<p>For concise conditional assignments, you can use an inline <code>if</code> expression. This uses the Python-style conditional-expression syntax rather than the JavaScript <code>condition ? a : b</code> form.</p>
+<pre><code class="language-javascript">// Syntax: value_if_true if condition else value_if_false
+var theme = &quot;dark&quot; if user.darkMode else &quot;light&quot;
+</code></pre>
+<h4 id="regular-expressions" tabindex="-1">Regular Expressions</h4>
+<p>You can create regular expressions by prefixing the expression with <code>r</code>.</p>
+<pre><code class="language-javascript">var emailRegex = r/^[^\s@]+@[^\s@]+\.[^\s@]+$/
+if emailRegex.test(user.email)
+  // Valid email address.
+endif
+</code></pre>
+<h3 id="filters-and-global-functions" tabindex="-1">Filters and Global Functions</h3>
+<p>CascadaScript supports the full range of Nunjucks <a href="https://mozilla.github.io/nunjucks/templating.html#builtin-filters">built-in filters</a> and <a href="https://mozilla.github.io/nunjucks/templating.html#global-functions">global functions</a>.</p>
+<h4 id="filters" tabindex="-1">Filters</h4>
+<p>Filters are applied with the pipe <code>|</code> operator.</p>
+<pre><code class="language-javascript">var title = &quot;a tale of two cities&quot; | title
+var users = [&quot;Alice&quot;, &quot;Bob&quot;]
+return {
+  title: title,           // &quot;A Tale Of Two Cities&quot;
+  users: users | join(&quot;, &quot;)  // &quot;Alice, Bob&quot;
+}
+</code></pre>
+<h4 id="global-functions" tabindex="-1">Global Functions</h4>
+<p>Global functions like <code>range</code> can be called directly.</p>
+<pre><code class="language-javascript">// range(n) returns [0, 1, ..., n-1]
+for i in range(3)
+  processItem(i)  // called with i = 0, 1, 2
+endfor
+</code></pre>
+<h4 id="additional-global-functions" tabindex="-1">Additional Global Functions</h4>
+<h5 id="cycleritems" tabindex="-1"><code>cycler(...items)</code></h5>
+<p>The <code>cycler</code> function creates an object that cycles through a set of values each time its <code>next()</code> method is called.</p>
+<pre><code class="language-javascript">// cycler requires sequential order - use 'each' so calls to next() stay in order
+data rows = []
+var rowClass = cycler(&quot;even&quot;, &quot;odd&quot;)
+each item in items
+  // First item gets &quot;even&quot;, second &quot;odd&quot;, third &quot;even&quot;, etc.
+  rows.push({ class: rowClass.next(), value: item })
+endeach
+return rows.snapshot()
+</code></pre>
+<h5 id="joinerseparator" tabindex="-1"><code>joiner([separator])</code></h5>
+<p>The <code>joiner</code> creates a function that returns the separator (default is <code>,</code>) on every call except the first. This is useful for delimiting items in a list.</p>
+<pre><code class="language-javascript">var comma = joiner(&quot;, &quot;)
+var output = &quot;&quot;
+each tag in [&quot;rock&quot;, &quot;pop&quot;, &quot;jazz&quot;]
+  output = output + comma() + tag
+endeach
+// output is &quot;rock, pop, jazz&quot;
+</code></pre>
+<h2 id="control-flow" tabindex="-1">Control Flow</h2>
+<p>This section covers control flow constructs. Remember that Cascada's concurrent-by-default execution means loops and conditionals behave differently than in traditional languages.
+These constructs also participate in Cascada's error-propagation model; for the full rules on poisoning, detection, and recovery, see <a href="#error-handling">Error Handling</a>.</p>
+<h3 id="conditionals" tabindex="-1">Conditionals</h3>
+<pre><code>if condition
+  // statements
+elif anotherCondition
+  // statements
+else
+  // statements
+endif
+</code></pre>
+<h3 id="switch-statements" tabindex="-1">Switch Statements</h3>
+<pre><code class="language-javascript">switch expression
+case value1
+  // statements
+case value2
+  // statements
+default
+  // statements
+endswitch
+</code></pre>
+<p>Switch statements provide a clean way to handle multiple conditional branches based on a single expression. Each branch creates its own scope, similar to <code>if</code> statements.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-javascript">var orderStatus = order.status
+var nextStep
+var notification
+var trackingUrl
+
+switch orderStatus
+case &quot;pending&quot;
+  nextStep = &quot;process_payment&quot;
+  notification = &quot;awaiting_payment&quot;
+case &quot;confirmed&quot;
+  nextStep = &quot;prepare_shipment&quot;
+  notification = &quot;order_confirmed&quot;
+case &quot;shipped&quot;
+  nextStep = &quot;track_delivery&quot;
+  trackingUrl = getTrackingUrl(order.id)
+default
+  nextStep = &quot;review_order&quot;
+  notification = &quot;unknown_status&quot;
+endswitch
+</code></pre>
+<p><strong>Important:</strong> Unlike C-style languages, Cascada's <code>switch</code> does not have fall-through behavior - each <code>case</code> exits automatically without needing a <code>break</code>. The <code>default</code> branch runs when no <code>case</code> matches.</p>
+<h3 id="loops" tabindex="-1">Loops</h3>
+<p>Cascada provides <code>for</code>, <code>while</code>, and <code>each</code> loops for iterating over collections and performing repeated actions, with powerful built-in support for asynchronous operations.</p>
+<h5 id="for-loops-iterate-concurrently" tabindex="-1"><code>for</code> Loops: Iterate Concurrently</h5>
+<p>Use a <code>for</code> loop to iterate over arrays, dictionaries (objects), async iterators, and other iterable data structures. By default, the body of the <code>for</code> loop executes concurrently for each item, maximizing I/O throughput for independent operations.</p>
+<p>External async iterables are <a href="https://github.com/geleto/cascada/blob/df4d5c2ac2e9b11ad22a5afa8c43c9b60f293f87/docs/cascada/async-iterables.md">replayable</a>: each loop sees the
+complete sequence. Values retain their native identity outside loops. Early
+termination requires explicit source disposal; JavaScript consumers can opt into
+replay with <code>makeSharedIterable</code>.</p>
+<pre><code class="language-javascript">// Each iteration runs concurrently, fetching user details
+data result
+for userId in userIds
+  var user = fetchUserDetails(userId)
+  result.users.push(user)  // data channel preserves source-code order
+endfor
+return result.snapshot()
+</code></pre>
+<p><strong>Concurrency Limits</strong>
+You can control the maximum number of concurrent iterations using the <code>of</code> keyword followed by an expression that evaluates to a number. This allows you to rate-limit API calls or manage resource usage dynamically.</p>
+<pre><code class="language-javascript">var limit = 5
+// Process items 5 at a time
+for item in largeCollection of limit
+  processItem(item)
+endfor
+</code></pre>
+<p>You can iterate over various collection types:</p>
+<ul>
+<li>
+<p><strong>Arrays</strong>:</p>
+<pre><code class="language-javascript">data result
+var items = [{ title: &quot;foo&quot;, id: 1 }, { title: &quot;bar&quot;, id: 2 }]
+for item in items
+  result.posts.push({ id: item.id, title: item.title })
+endfor
+return result.snapshot()
+</code></pre>
+</li>
+<li>
+<p><strong>Objects/Dictionaries</strong>:
+Iterates over keys and values. Note that concurrency limits (<code>of N</code>) are ignored for plain objects.</p>
+<pre><code class="language-javascript">text log
+var food = { ketchup: '5 tbsp', mustard: '1 tbsp' }
+for ingredient, amount in food
+  log(&quot;Use &quot;, amount, &quot; of &quot;, ingredient)
+endfor
+</code></pre>
+</li>
+<li>
+<p><strong>Unpacking Arrays</strong>:</p>
+<pre><code class="language-javascript">var points = [[0, 1, 2], [5, 6, 7]]
+text log
+for x, y, z in points
+  log(&quot;Point: &quot;, x, &quot;, &quot;, y, &quot;, &quot;, z)
+endfor
+</code></pre>
+</li>
+<li>
+<p><strong>Async Iterators</strong>:
+Iterate seamlessly over async generators or streams. Cascada automatically handles waiting for items to be yielded.</p>
+<p><strong>Context Setup:</strong></p>
+<pre><code class="language-javascript">const context = {
+  generateNumbers: async function* () {
+    yield 1;
+    await new Promise(r =&gt; setTimeout(r, 100));
+    yield 2;
+  }
+};
+</code></pre>
+<p><strong>Script:</strong></p>
+<pre><code class="language-javascript">text log
+for num in generateNumbers()
+  log(&quot;Received: &quot;, num)
+endfor
+</code></pre>
+</li>
+</ul>
+<p><strong>The <code>else</code> block</strong>
+A <code>for</code> loop can have an <code>else</code> block that is executed only if the collection is empty:</p>
+<pre><code class="language-javascript">text log
+for item in []
+  log(&quot;Item: &quot;, item.name)
+else
+  log(&quot;The collection was empty.&quot;)
+endfor
+</code></pre>
+<h5 id="while-loops-iterate-sequentially-based-on-condition" tabindex="-1"><code>while</code> Loops: Iterate Sequentially based on Condition</h5>
+<p>Use a <code>while</code> loop to execute a block of code repeatedly as long as a condition is true. Unlike the concurrent <code>for</code> loop, the <code>while</code> loop's body executes sequentially. The condition is re-evaluated only after the body has fully completed its execution for the current iteration.</p>
+<pre><code>while some_expression
+  // These statements run sequentially in each iteration
+endwhile
+</code></pre>
+<h5 id="each-loops-iterate-sequentially" tabindex="-1"><code>each</code> Loops: Iterate Sequentially</h5>
+<p>For cases where you need to iterate over a collection but preserve strict sequential order, use an <code>each</code> loop. It has the same syntax as a <code>for</code> loop but guarantees that each iteration completes before the next one begins.</p>
+<pre><code>each item in collection
+  // Each iteration completes before the next one starts
+endeach
+</code></pre>
+<h5 id="the-loop-variable" tabindex="-1">The <code>loop</code> Variable</h5>
+<p>Inside a <code>for</code>, <code>while</code>, or <code>each</code> loop, you have access to the special <code>loop</code> variable, which provides information about the current iteration.</p>
+<p><strong>Always-Available Properties</strong>
+These properties are available in all loop types and modes:</p>
+<ul>
+<li><code>loop.index</code>: The current iteration of the loop (1-indexed).</li>
+<li><code>loop.index0</code>: The current iteration of the loop (0-indexed).</li>
+<li><code>loop.first</code>: <code>true</code> if this is the first iteration.</li>
+</ul>
+<p><strong>Length-Dependent Properties</strong>
+Properties that require knowledge of the total collection size:</p>
+<ul>
+<li><code>loop.length</code>: The total number of items in the sequence.</li>
+<li><code>loop.last</code>: <code>true</code> if this is the last iteration.</li>
+<li><code>loop.revindex</code>: The number of iterations until the end (1-indexed).</li>
+<li><code>loop.revindex0</code>: The number of iterations until the end (0-indexed).</li>
+</ul>
+<p>Use the following guidelines to determine if these properties are available:</p>
+<ol>
+<li>
+<p>Arrays and Objects:
+<strong>Always Available.</strong> Because the size of an array or object is known upfront, these properties are available regardless of whether the loop runs concurrently, sequentially, or with a concurrency limit.</p>
+</li>
+<li>
+<p>Concurrent Async Iterators:
+<strong>Available (Async).</strong> For fully concurrent async iterators, <code>loop.length</code> and <code>loop.last</code> are resolved asynchronously after Cascada has consumed the entire iterator. In practice, these behave like promise-backed loop metadata: loop bodies can start immediately as items arrive, and expressions that depend on <code>loop.length</code> or <code>loop.last</code> simply wait until the stream has been fully consumed.</p>
+</li>
+<li>
+<p>Sequential or Constrained Async Iterators:
+<strong>Not Available.</strong> When an async iterator is restricted - by <code>each</code> or by a concurrency limit (<code>of N</code>) - Cascada treats it as a stream and does not provide <code>loop.length</code> or <code>loop.last</code>. In these modes, the loop only learns about the next item by continuing iteration. If an iteration were allowed to wait on <code>loop.length</code> or <code>loop.last</code>, it could block the very iteration progress needed to discover the end of the stream, causing a deadlock.</p>
+<p>In other words:</p>
+<ul>
+<li>In an <code>each</code> loop, the current iteration must finish before Cascada can request the next item. Waiting for <code>loop.length</code> or <code>loop.last</code> would therefore wait for the end of the stream while preventing the stream from advancing.</li>
+<li>In a bounded <code>for ... of N</code> loop, worker slots move on independently, and earlier iterations may still be unfinished while later items are being fetched. If all active workers waited for <code>loop.length</code> or <code>loop.last</code>, no worker would be free to keep draining the iterator, so the end would never be discovered.</li>
+</ul>
+<p>Because of that, these properties are intentionally treated as unavailable rather than as deferred values in sequential or bounded async-iterator loops.</p>
+</li>
+<li>
+<p><code>while</code> Loops:
+<strong>Not Available.</strong> Since a <code>while</code> loop runs until a condition changes, the total number of iterations is never known before all iterations complete.</p>
+</li>
+</ol>
+<h3 id="error-handling-and-recovery-with-conditionals-and-loops" tabindex="-1">Error handling and recovery with conditionals and loops</h3>
+<p>When an Error Value affects a conditional or loop, Cascada ensures that corrupted data never silently produces incorrect results by propagating the error to any variables or channels that would have been modified.</p>
+<h4 id="error-handling-with-if-and-switch-statements" tabindex="-1">Error handling with <code>if</code> and <code>switch</code> statements</h4>
+<p>If the condition of an <code>if</code> statement (or the expression of a <code>switch</code> statement) evaluates to an Error Value, all branches are skipped, and the error is propagated to any variables or channels that would have been modified within any branch.</p>
+<pre><code class="language-javascript">var user = fetchUser(userId)  // May fail
+var accessLevel  // declare in outer scope
+
+// If user is an Error Value, both branches are skipped
+// and accessLevel becomes poisoned (it would have been modified)
+if user.role == &quot;admin&quot;
+  accessLevel = &quot;full&quot;
+else
+  accessLevel = &quot;limited&quot;
+endif
+
+// If user was an error, accessLevel is now poisoned
+</code></pre>
+<p>This behavior is important to understand: it's not just that the code doesn't execute - any variables or channels that would have been assigned in any of the branches become poisoned. This ensures you can detect downstream that something went wrong, rather than having undefined or stale values.</p>
+<p><strong>Note:</strong> <code>switch</code> statements behave identically - if the switch expression is an Error Value, all <code>case</code> and <code>default</code> branches are skipped and their outputs become poisoned.</p>
+<h4 id="error-handling-with-loops" tabindex="-1">Error handling with loops</h4>
+<p>If a loop's iterable evaluates to an Error Value, the loop body is skipped and the error propagates to any variables or channels that would have been modified by the loop.</p>
+<pre><code class="language-javascript">var posts = fetchPosts()  // May fail
+data out
+
+// If posts is an Error Value, loop body is skipped
+// and out becomes poisoned
+for post in posts
+  out.titles.push(post.title)
+endfor
+
+// If posts was an error, out is now poisoned
+</code></pre>
+<p>Similar to conditionals, the loop doesn't just skip execution - any outputs or variables that the loop body would have modified become poisoned, ensuring error detection downstream.</p>
+<p>In scripts, iterating a scalar primitive such as a number or boolean also produces an <code>Error Value</code>. Iterating <code>none</code> still runs the <code>else</code> branch because it represents an absent collection.</p>
+<p>For details on detecting and recovering from errors in your scripts, see the <a href="#error-handling">Error Handling</a> section.</p>
+<h2 id="channels" tabindex="-1">Channels</h2>
+<p>Channels are named values you build over time. You write into them with assignments and method calls, and read the current assembled value with <code>snapshot()</code>. They are the main tool for ordered writes in CascadaScript: their writes run as soon as their inputs are ready, and the final assembled result still follows source-code order.</p>
+<p>Channels also participate in Cascada's error-propagation model; for the full rules on poisoning, detection, and recovery, see <a href="#error-handling">Error Handling</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Declaration</th>
+<th>Type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>text name</code></td>
+<td>Text channel</td>
+<td>Build a text string</td>
+</tr>
+<tr>
+<td><code>data name</code></td>
+<td>Data channel</td>
+<td>Build structured objects and arrays</td>
+</tr>
+</tbody>
+</table>
+<p>Use <code>name.snapshot()</code> to read the current assembled value. <code>snapshot()</code> is an observable operation - it waits for any pending writes to finish before returning. Because of that, it is more expensive than reading a plain <code>var</code>, so prefer <code>var</code> for simple cases and reach for <code>data</code> or <code>text</code> when you need ordered assembly.</p>
+<h3 id="a-simple-example" tabindex="-1">A Simple Example</h3>
+<p>Before diving into the details, here's a simple <code>text</code> channel example:</p>
+<table>
+<tr>
+<td width="50%" valign="top">
+<details open>
+<summary><strong>CascadaScript</strong></summary>
+<pre><code class="language-javascript">text log
+log(&quot;Starting import\n&quot;)
+for user in users
+  log(&quot;Imported: &quot;, user.name, &quot;\n&quot;)
+endfor
+log(&quot;Done.&quot;)
+return log.snapshot()
+</code></pre>
+</details>
+</td>
+<td width="50%" valign="top">
+<details open>
+<summary><strong>Final Text</strong></summary>
+<pre><code class="language-text">Starting import
+Imported: Alice
+Imported: Bob
+Done.
+</code></pre>
+</details>
+</td>
+</tr>
+</table>
+<h3 id="how-channel-writes-are-ordered" tabindex="-1">How Channel Writes Are Ordered</h3>
+<p>Channel writes execute as soon as their required input data is available, following the same data-driven scheduling as the rest of Cascada. The key guarantee is that the assembled result is always in source-code order, regardless of when individual writes actually execute.</p>
+<h3 id="the-text-channel-generating-text" tabindex="-1">The <code>text</code> Channel: Generating Text</h3>
+<p>The <code>text</code> channel builds a string of text. It is the simplest channel to reach for when concurrent code needs to contribute to one final piece of text while preserving source-code order.</p>
+<pre><code class="language-javascript">text log
+log(&quot;Processing user &quot;, userId, &quot;...&quot;)
+for item in items
+  log(&quot;Item: &quot;, item.name)
+endfor
+log(&quot;...done.&quot;)
+return log.snapshot()
+</code></pre>
+<p>Two write forms:</p>
+<table>
+<thead>
+<tr>
+<th>Syntax</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name(expr, ...)</code></td>
+<td>Appends all arguments to the text stream in order; <code>name()</code> writes nothing</td>
+</tr>
+<tr>
+<td><code>name = expr</code></td>
+<td>Overwrites the entire text with <code>expr</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-data-channel-building-structured-data" tabindex="-1">The <code>data</code> Channel: Building Structured Data</h3>
+<p>The <code>data</code> channel is the main tool for constructing structured output. It is especially useful when concurrent code needs to build arrays or objects in a predictable order - all writes execute concurrently, but the assembled result always matches source-code order. This is the right alternative to <a href="#mutation-methods-and-side-effects">mutation methods on plain <code>var</code> values</a>, which race in concurrent code.</p>
+<p>The key difference from a plain <code>var</code> is that <code>data</code> operations such as <code>.push()</code>, <code>.merge()</code>, and <code>.append()</code> are channel commands, not ordinary JavaScript in-place mutations. They are scheduled and assembled safely by Cascada, so they remain safe even when multiple concurrent branches write to the same <code>data</code> channel. On a plain <code>var</code>, those same method names are just standard JavaScript side effects on the current value, so concurrent calls do not get ordered assembly guarantees.</p>
+<p>Use a plain <code>var</code> when you are building a value locally in one place, or when you genuinely do not need channel ordering/assembly behavior. Use a <code>data</code> channel when multiple concurrent branches contribute to the same result, or when you want ordered path-based construction without shared-mutation races.</p>
+<p>As a rule of thumb, <code>data</code> channels optimize for correctness and ordered assembly, not raw in-memory mutation speed. On very large nested structures, many fine-grained property writes can be slower than composing a plain object or array locally and assigning or returning it once.</p>
+<p>Here's a simple example:</p>
+<table>
+<tr>
+<td width="50%" valign="top">
+<details open>
+<summary><strong>CascadaScript</strong></summary>
+<pre><code class="language-javascript">data out
+
+// Set a simple value
+out.user.name = &quot;Alice&quot;
+// Initialize 'logins' and increment it
+out.user.logins = 0
+out.user.logins++
+
+// The 'roles' array is created
+// automatically on first push
+out.user.roles.push(&quot;editor&quot;)
+
+return out.snapshot()
+</code></pre>
+</details>
+</td>
+<td width="50%" valign="top">
+<details open>
+<summary><strong>Final Assembled Data</strong></summary>
+<pre><code class="language-json">{
+  &quot;user&quot;: {
+    &quot;name&quot;: &quot;Alice&quot;,
+    &quot;logins&quot;: 1,
+    &quot;roles&quot;: [ &quot;editor&quot; ]
+  }
+}
+</code></pre>
+</details>
+</td>
+</tr>
+</table>
+<h4 id="implicit-initialization-in-data" tabindex="-1">Implicit Initialization in <code>data</code></h4>
+<p>The <code>data</code> channel automatically initializes structural values when assembling output. This allows data to be built declaratively without manual setup.</p>
+<h6 id="what-data-initializes-automatically" tabindex="-1">What <code>data</code> Initializes Automatically</h6>
+<ul>
+<li>
+<p><strong>Objects (<code>{}</code>)</strong>
+Created on first property write or object operation (<code>merge</code>, <code>deepMerge</code>).</p>
+<pre><code class="language-cascada">out.user.name = &quot;Alice&quot;
+out.settings.merge({ theme: &quot;dark&quot; })
+</code></pre>
+</li>
+<li>
+<p><strong>Arrays (<code>[]</code>)</strong>
+Created on first array operation.</p>
+<pre><code class="language-cascada">out.items.push(&quot;a&quot;)
+</code></pre>
+</li>
+<li>
+<p><strong>Strings (<code>&quot;&quot;</code>) - string operations only</strong>
+Created on first string-specific operation.</p>
+<pre><code class="language-cascada">out.log.append(&quot;Started\n&quot;)
+out.title += &quot;!&quot;
+</code></pre>
+</li>
+</ul>
+<h6 id="what-data-does-not-initialize" tabindex="-1">What <code>data</code> Does <em>Not</em> Initialize</h6>
+<p>Scalar values must be explicitly initialized before use:</p>
+<ul>
+<li>
+<p><strong>Numbers</strong></p>
+<pre><code class="language-cascada">out.count = 0
+out.count++
+</code></pre>
+</li>
+<li>
+<p><strong>Booleans / logical values</strong></p>
+<pre><code class="language-cascada">out.ready = false
+out.ready ||= true
+</code></pre>
+</li>
+</ul>
+<h6 id="summary" tabindex="-1">Summary</h6>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Auto-initialized</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Object</td>
+<td>Yes</td>
+<td>Structural operations</td>
+</tr>
+<tr>
+<td>Array</td>
+<td>Yes</td>
+<td>Structural operations</td>
+</tr>
+<tr>
+<td>String</td>
+<td>Yes</td>
+<td>String operations only</td>
+</tr>
+<tr>
+<td>Number</td>
+<td>No</td>
+<td>Must initialize</td>
+</tr>
+<tr>
+<td>Boolean</td>
+<td>No</td>
+<td>Must initialize</td>
+</tr>
+</tbody>
+</table>
+<h4 id="data-operations" tabindex="-1"><code>data</code> Operations</h4>
+<p>Below is a detailed list of all available commands and operators.</p>
+<p><strong>Assignment and Deletion</strong></p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name.path = value</code></td>
+<td><strong>Replaces</strong> the value at <code>path</code>. Creates objects/arrays as needed. Shorthand for <code>set</code>.</td>
+</tr>
+<tr>
+<td><code>name.path.delete()</code></td>
+<td><strong>Deletes</strong> the value at <code>path</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Array Operations</strong></p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name.path.push(value)</code></td>
+<td>Appends an element to the array at <code>path</code>.</td>
+</tr>
+<tr>
+<td><code>name.path.concat(value)</code></td>
+<td>Concatenates another array or value to the array at <code>path</code>.</td>
+</tr>
+<tr>
+<td><code>name.path.pop()</code></td>
+<td>Removes the last element from the array at <code>path</code>.</td>
+</tr>
+<tr>
+<td><code>name.path.shift()</code></td>
+<td>Removes the first element from the array at <code>path</code>.</td>
+</tr>
+<tr>
+<td><code>name.path.unshift(value)</code></td>
+<td>Adds one or more elements to the beginning of the array at <code>path</code>.</td>
+</tr>
+<tr>
+<td><code>name.path.reverse()</code></td>
+<td>Reverses the order of the elements in-place.</td>
+</tr>
+<tr>
+<td><code>name.path.at(index)</code></td>
+<td>Replaces <code>path</code> with the element at the specified <code>index</code>.</td>
+</tr>
+<tr>
+<td><code>name.path.sort()</code></td>
+<td>Sorts the array at <code>path</code> in-place.</td>
+</tr>
+<tr>
+<td><code>name.path.sortWith(func)</code></td>
+<td>Sorts the array using a custom comparison function.</td>
+</tr>
+<tr>
+<td><code>name.path.arraySlice(start, [end])</code></td>
+<td>Replaces <code>path</code> with a slice of the array.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Object Manipulation</strong></p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name.path.merge(value)</code></td>
+<td>Merges the properties of an object into the object at <code>path</code>. Shallow merge.</td>
+</tr>
+<tr>
+<td><code>name.path.deepMerge(value)</code></td>
+<td>Deeply merges the properties of an object into the object at <code>path</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Merge sources and targets must be plain records (ordinary objects or null-prototype
+dictionaries). Deep merging and snapshots clone nested records and arrays; class
+instances such as streams, dates and maps remain opaque values with their identity
+preserved.</p>
+<p><strong>Arithmetic Operations</strong>
+These operators require the target to be a number (must be initialized first).</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name.path += value</code></td>
+<td>Adds a number to the target.</td>
+</tr>
+<tr>
+<td><code>name.path -= value</code></td>
+<td>Subtracts a number from the target.</td>
+</tr>
+<tr>
+<td><code>name.path *= value</code></td>
+<td>Multiplies the target by a number.</td>
+</tr>
+<tr>
+<td><code>name.path /= value</code></td>
+<td>Divides the target by a number.</td>
+</tr>
+<tr>
+<td><code>name.path++</code></td>
+<td>Increments the target number by 1.</td>
+</tr>
+<tr>
+<td><code>name.path--</code></td>
+<td>Decrements the target number by 1.</td>
+</tr>
+<tr>
+<td><code>name.path.min(value)</code></td>
+<td>Replaces target with <code>min(target, value)</code>.</td>
+</tr>
+<tr>
+<td><code>name.path.max(value)</code></td>
+<td>Replaces target with <code>max(target, value)</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>String Operations</strong>
+String is created automatically if the path does not exist.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name.path += value</code></td>
+<td>Appends a string to the target.</td>
+</tr>
+<tr>
+<td><code>name.path.append(value)</code></td>
+<td>Appends a string to the string value at <code>path</code>.</td>
+</tr>
+<tr>
+<td><code>name.path.toUpperCase()</code></td>
+<td>Replaces with uppercase version.</td>
+</tr>
+<tr>
+<td><code>name.path.toLowerCase()</code></td>
+<td>Replaces with lowercase version.</td>
+</tr>
+<tr>
+<td><code>name.path.slice(start, [end])</code></td>
+<td>Replaces with the extracted section.</td>
+</tr>
+<tr>
+<td><code>name.path.substring(start, [end])</code></td>
+<td>Replaces with the extracted section (no negative indices).</td>
+</tr>
+<tr>
+<td><code>name.path.trim()</code></td>
+<td>Removes whitespace from both ends.</td>
+</tr>
+<tr>
+<td><code>name.path.trimStart()</code></td>
+<td>Removes leading whitespace.</td>
+</tr>
+<tr>
+<td><code>name.path.trimEnd()</code></td>
+<td>Removes trailing whitespace.</td>
+</tr>
+<tr>
+<td><code>name.path.replace(find, replace)</code></td>
+<td>Replaces the first occurrence.</td>
+</tr>
+<tr>
+<td><code>name.path.replaceAll(find, replace)</code></td>
+<td>Replaces all occurrences.</td>
+</tr>
+<tr>
+<td><code>name.path.split([separator])</code></td>
+<td>Replaces with an array of substrings.</td>
+</tr>
+<tr>
+<td><code>name.path.charAt(index)</code></td>
+<td>Replaces with the character at the specified index.</td>
+</tr>
+<tr>
+<td><code>name.path.repeat(count)</code></td>
+<td>Repeats the string <code>count</code> times.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Logical &amp; Bitwise Operations</strong></p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name.path &amp;&amp;= value</code></td>
+<td>Logical AND assignment.</td>
+</tr>
+<tr>
+<td><code>name.path ||= value</code></td>
+<td>Logical OR assignment.</td>
+</tr>
+<tr>
+<td><code>name.path &amp;= value</code></td>
+<td>Bitwise AND assignment.</td>
+</tr>
+<tr>
+<td><code>name.path |= value</code></td>
+<td>Bitwise OR assignment.</td>
+</tr>
+<tr>
+<td><code>name.path.not()</code></td>
+<td>Logical NOT.</td>
+</tr>
+<tr>
+<td><code>name.path.bitNot()</code></td>
+<td>Bitwise NOT.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="advanced-pathing" tabindex="-1">Advanced Pathing</h4>
+<p>Paths in <code>data</code> commands are highly flexible.</p>
+<ul>
+<li><strong>Dynamic Paths</strong>: Paths can include variables and expressions.<pre><code class="language-javascript">for user in userList
+  result.report.users[user.id].status = &quot;processed&quot;
+endfor
+</code></pre>
+</li>
+<li><strong>Root-Level Modification</strong>: Use the <code>data</code> value directly to replace the root.<pre><code class="language-javascript">// Replaces the entire data object with a new one
+result = { status: &quot;complete&quot;, timestamp: now() }
+</code></pre>
+After re-assignment, you can use methods appropriate for the new type:<pre><code class="language-javascript">result = []
+result.push(&quot;first item&quot;)
+</code></pre>
+</li>
+<li><strong>Array Index Targeting</strong>: Target specific array indices with square brackets. The empty bracket notation <code>[]</code> refers to the last item added in the script's sequential order.<pre><code class="language-javascript">result.users[0].permissions.push(&quot;read&quot;)
+
+result.users.push({ name: &quot;Charlie&quot; })
+result.users[].permissions.push(&quot;read&quot;) // Affects &quot;Charlie&quot;
+</code></pre>
+</li>
+</ul>
+<h4 id="handling-missing-and-none-targets" tabindex="-1">Handling Missing and <code>none</code> Targets</h4>
+<ul>
+<li><strong>Structure-building methods</strong> (<code>.push()</code>, <code>.merge()</code>, <code>.append()</code>) can create the needed structure when the target path does not exist yet.</li>
+<li><strong>Arithmetic and logical operators</strong> (<code>+=</code>, <code>--</code>, <code>&amp;&amp;=</code>, etc.) throw a runtime error if the target is <code>none</code>/<code>null</code> or missing. Initialize explicitly first.</li>
+</ul>
+<h4 id="extending-data-with-custom-methods" tabindex="-1">Extending <code>data</code> with Custom Methods</h4>
+<p>You can add your own custom methods or override existing ones for the built-in <code>data</code> channel using <code>env.addDataMethods()</code>. This lets you extend <code>data</code> with domain-specific operations while keeping the same ordered channel semantics.</p>
+<pre><code class="language-javascript">// In your JS setup
+env.addDataMethods({
+  // methodName is how you'll call it in the script: name.path.methodName(...)
+  methodName: function(target, ...args) {
+    // ... your logic ...
+    return newValue;
+  }
+});
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>target</code>: The current value at the path the command is targeting. If the path doesn't exist yet, <code>target</code> will be <code>undefined</code>.</li>
+<li><code>...args</code>: A list of the arguments passed to the method in the script.</li>
+</ul>
+<p><strong>Return Value:</strong></p>
+<ul>
+<li><strong>If you return any value</strong>, it replaces the <code>target</code> value at that path.</li>
+<li><strong>If you return <code>undefined</code></strong>, it signals the engine to delete the property at that path.</li>
+</ul>
+<p><strong>Overriding Operators:</strong></p>
+<p>All shortcut operators (<code>+=</code>, <code>++</code>, <code>&amp;&amp;=</code>, etc.) are mapped to underlying methods.</p>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>Corresponding Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name.path = value</code></td>
+<td><code>set(target, value)</code></td>
+</tr>
+<tr>
+<td><code>name.path += value</code></td>
+<td><code>add(target, value)</code></td>
+</tr>
+<tr>
+<td><code>name.path -= value</code></td>
+<td><code>subtract(target, value)</code></td>
+</tr>
+<tr>
+<td><code>name.path *= value</code></td>
+<td><code>multiply(target, value)</code></td>
+</tr>
+<tr>
+<td><code>name.path /= value</code></td>
+<td><code>divide(target, value)</code></td>
+</tr>
+<tr>
+<td><code>name.path++</code></td>
+<td><code>increment(target)</code></td>
+</tr>
+<tr>
+<td><code>name.path--</code></td>
+<td><code>decrement(target)</code></td>
+</tr>
+<tr>
+<td><code>name.path &amp;&amp;= value</code></td>
+<td><code>and(target, value)</code></td>
+</tr>
+<tr>
+<td><code>name.path ||= value</code></td>
+<td><code>or(target, value)</code></td>
+</tr>
+<tr>
+<td><code>name.path &amp;= value</code></td>
+<td><code>bitAnd(target, value)</code></td>
+</tr>
+<tr>
+<td><code>name.path |= value</code></td>
+<td><code>bitOr(target, value)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example: Adding a custom <code>upsert</code> method</strong></p>
+<pre><code class="language-javascript">// --- In your JavaScript setup ---
+env.addDataMethods({
+  upsert: (target, newItem) =&gt; {
+    if (!Array.isArray(target)) {
+      target = [];
+    }
+    const index = target.findIndex(item =&gt; item.id === newItem.id);
+    if (index &gt; -1) {
+      Object.assign(target[index], newItem);
+    } else {
+      target.push(newItem);
+    }
+    return target;
+  }
+});
+
+// --- In your CascadaScript ---
+data out
+out.users.upsert({ id: 1, name: &quot;Alice&quot; })
+out.users.upsert({ id: 1, name: &quot;Alice&quot;, status: &quot;active&quot; })
+return out.snapshot()
+</code></pre>
+<h3 id="error-handling-and-recovery-with-channels" tabindex="-1">Error handling and recovery with channels</h3>
+<p>When an Error Value is written to a channel, that channel becomes poisoned. This means the channel's final output will be an Error Value, which causes the current script's <code>snapshot()</code> or <code>return</code> to fail.</p>
+<pre><code class="language-javascript">data out
+var user = fetchUser(userId)  // May fail
+
+// If user is an Error Value, this write poisons out
+out.userName = user.name
+
+// out is now poisoned - returning it will fail the script
+return out.snapshot()
+</code></pre>
+<p>You can protect these values from poisoning and recover from errors using <code>guard</code> blocks:</p>
+<pre><code class="language-javascript">data out
+guard
+  var payload = fetchData()  // May fail
+  out.result = payload
+recover err
+  out.result = &quot;fallback value&quot;
+endguard
+return out.snapshot()
+</code></pre>
+<p>For details, see <a href="#protecting-state-with-guard">Protecting State with <code>guard</code></a>.</p>
+<h2 id="sequencing-external-interactions" tabindex="-1">Sequencing External Interactions</h2>
+<p>Cascada can order its own internal work automatically, including dependencies and data/text channel assembly. The hard case is imported native functions and objects from the render context: APIs, mutable object methods, database handles, file writers, LLM clients, and helpers that read or change shared state. Cascada cannot know whether those calls are pure or side-effectful, so you mark the ordering explicitly.</p>
+<p>There are two dedicated sequencing constructs for external interactions:</p>
+<table>
+<thead>
+<tr>
+<th>Construct</th>
+<th>Syntax</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>!</code> marker</td>
+<td><code>obj!.method()</code>, <code>obj!.prop</code></td>
+<td>Sequence calls and reads on a static context path</td>
+</tr>
+<tr>
+<td><code>sequence</code> object</td>
+<td><code>sequence db = services.db</code>, <code>var user = db.getUser(1)</code></td>
+<td>Create a named ordered interface around one external object</td>
+</tr>
+</tbody>
+</table>
+<p>Both are narrow by design: they sequence only the object or path they touch, while unrelated work in the script continues concurrently.</p>
+<h3 id="sequential-execution-with" tabindex="-1">Sequential Execution with <code>!</code></h3>
+<p>External objects in the context - databases, APIs, stateful services - often have operations with side effects. Because Cascada runs independent operations concurrently, calling them without coordination can produce unpredictable results.</p>
+<p>Use <code>!</code> to mark a call as having side effects on a path. Once any call on a path is marked with <code>!</code>, that path becomes sequential - all subsequent accesses wait for the preceding operation to complete, whether they carry <code>!</code> or not, including property reads, while unrelated operations continue concurrently. Behind the scenes, each sequenced access awaits the promise returned by the previous operation on that path before starting, so the full async operation completes before the next begins.</p>
+<p>Sequencing is hierarchical: a side effect declared on a parent path sequences all sub-paths beneath it. Marking <code>bank!</code> means everything that follows under <code>bank</code> - <code>bank.account</code>, <code>bank.user</code>, and so on - must wait for that operation to complete.</p>
+<p>Sequential paths also participate in Cascada's error-propagation model; for the full rules on poisoning, repair, and recovery, see <a href="#error-handling">Error Handling</a>.</p>
+<pre><code class="language-javascript">// `!` on deposit() signals side effects - bank.account becomes a sequential path.
+bank.account!.deposit(100)
+bank.account.getStatus()       // waits - plain call on a sequential path
+bank.account!.withdraw(50)     // waits - ! calls also wait and extend the sequence
+var bal = bank.account.balance // waits - property reads are sequenced as well
+</code></pre>
+<p>Sequencing a parent path affects all sub-paths:</p>
+<pre><code class="language-javascript">// `!` on bank signals side effects on the bank object as a whole.
+bank!.resetUser(userInfo)
+bank.account.deposit(100)  // waits - bank.account is under bank
+bank.user.getName()        // waits - bank.user is under bank too
+</code></pre>
+<p>For details on how to handle errors within a sequential path, see <a href="#repairing-sequential-paths-with">Repairing Sequential Paths with <code>!!</code></a> in the Errors Are Data section.</p>
+<h4 id="method-specific-sequencing" tabindex="-1">Method-Specific Sequencing</h4>
+<p>You can also sequence calls to a specific method on an object, rather than making the whole path sequential. Place the <code>!</code> after the method name:</p>
+<pre><code class="language-javascript">// Only calls to 'log' are sequential
+logger.log!(&quot;Entry 1&quot;)
+logger.log!(&quot;Entry 2&quot;)
+
+// Unmarked methods run concurrently
+logger.getStatus()
+</code></pre>
+<p>This is useful for rate-limiting or ordering specific actions (like &quot;append&quot;) while keeping the rest of the object non-blocking. Note that unlike path sequencing (<code>obj!.method()</code>), unmarked calls to the same method (<code>logger.log()</code>) will not wait on the method-specific sequence.</p>
+<h4 id="ordered-external-apis" tabindex="-1">Ordered External APIs</h4>
+<p>Use sequential paths for stateful external APIs that need strict ordering. For example, a turtle graphics object can be provided in the render context, and each drawing command can be ordered with <code>!</code>:</p>
+<pre><code class="language-javascript">// `turtle` is provided by the render context.
+turtle!.penDown()
+turtle!.moveTo(10, 10)
+turtle!.lineTo(50, 10)
+turtle!.lineTo(50, 40)
+turtle!.penUp()
+</code></pre>
+<p>Only the <code>turtle</code> path is serialized. Other independent work in the script can still run concurrently.</p>
+<p><code>!</code> guarantees <strong>order</strong> and that the call <strong>runs</strong> - but not that it has <em>finished</em> when the render resolves. The render waits only on the returned value, not on a pure side effect, so a slow <code>db!.save(record)</code> may settle after the render returns. If you need it awaited, fold its result into what you return (<code>result.ack = db!.save(record)</code>).</p>
+<h4 id="context-requirement-for-sequential-paths" tabindex="-1">Context Requirement for Sequential Paths</h4>
+<p>Sequential paths must reference objects from the context, not local variables.
+If the root name is absent from the context, the path is an Error Value of <a href="#the-kind-property">kind</a> <a href="#the-kind-property"><code>UnknownVariable</code></a>.
+The JS context object:</p>
+<pre><code class="language-javascript">// Assuming 'db' is provided in the context object:
+const context = { db: connectToDatabase() };
+</code></pre>
+<p>The script:</p>
+<pre><code class="language-javascript">// CORRECT: Direct reference to context property
+db!.insert(data)
+
+// WRONG: Local variable copy
+var database = db
+database!.insert(data)  // Error: sequential paths must be from context
+</code></pre>
+<p>Nested access from context properties works fine:</p>
+<pre><code class="language-javascript">services.database!.insert(data)  // CORRECT (if 'services' is in context)
+</code></pre>
+<p><strong>Why this restriction?</strong> The engine uses object identity from the context to guarantee sequential ordering. Copying context objects to local variables breaks this tracking, which is why it's not allowed.</p>
+<p>Support for using <code>!</code> through <code>function</code> parameters is planned, but it is not implemented yet.</p>
+<h3 id="the-sequence-construct" tabindex="-1">The <code>sequence</code> Construct</h3>
+<p>A <code>sequence</code> declaration creates a sequence object that wraps an external object from the render context with strictly sequential access. Use it for imported native objects whose methods or property reads depend on order, such as mutable API clients, database transactions, graphics contexts, file writers, state machines, or helpers that touch shared state. Every read and call through the sequence object is serialized in source-code order.</p>
+<pre><code class="language-javascript">sequence db = services.db
+var user = db.getUser(1)
+var state = db.connectionState
+return { user: user, state: state }
+</code></pre>
+<pre><code class="language-javascript">sequence db = services.db
+var id = db.api.client.getId()
+return id
+</code></pre>
+<p><strong>Key characteristics:</strong></p>
+<ul>
+<li>The initializer must come from the context object</li>
+<li>Supports value-returning calls: <code>var x = seq.method(args)</code></li>
+<li>Supports property reads: <code>var s = seq.status</code></li>
+<li>Supports nested sub-path calls: <code>var id = seq.api.client.getId()</code></li>
+<li>Supports <code>snapshot()</code>: <code>var snap = seq.snapshot()</code></li>
+<li>Property assignment is currently a compile error, but this is expected to be supported in the future</li>
+</ul>
+<pre><code class="language-javascript">sequence db = services.db
+db.connectionState = &quot;offline&quot;  // compile error - assignment not allowed
+</code></pre>
+<p>If a <code>sequence</code> becomes poisoned, the built-in way to recover it is with a <code>guard</code>. See <a href="#protecting-state-with-guard">Protecting State with <code>guard</code></a>.</p>
+<h3 id="the-sequence-construct-vs" tabindex="-1">The <code>sequence</code> Construct vs. <code>!</code></h3>
+<p><code>sequence</code> and <code>!</code> both give you ordering, but they solve different problems:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>!</code> marker</th>
+<th><code>sequence</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>What it is</strong></td>
+<td>A marker on a static context path</td>
+<td>A declared sequence object</td>
+</tr>
+<tr>
+<td><strong>What it is for</strong></td>
+<td>Ordering side effects on one external context path</td>
+<td>Ordered reads and calls on one external context object</td>
+</tr>
+<tr>
+<td><strong>Return values</strong></td>
+<td>Mainly used for side-effectful operations</td>
+<td>Read immediately in normal expressions</td>
+</tr>
+<tr>
+<td><strong>Example</strong></td>
+<td><code>db!.insert(user)</code></td>
+<td><code>var user = db.getUser(1)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Use <code>!</code> when you want to serialize side effects on a specific context path without wrapping the whole object. Use <code>sequence</code> when the external object itself is your ordered interface.</p>
+<h2 id="functions-and-reusable-components" tabindex="-1">Functions and Reusable Components</h2>
+<p>Functions in CascadaScript are declared with <code>function ... endfunction</code>. They let you define reusable chunks of logic that build and return values. They operate in a completely isolated scope and are the primary way to create modular, reusable components in CascadaScript.</p>
+<p>These functions use <code>return</code> to return values. If no <code>return</code> runs, the
+function returns <code>none</code>. Channels declared inside a function are local to that
+function.</p>
+<h3 id="defining-and-calling-a-function" tabindex="-1">Defining and Calling a Function</h3>
+<p>A function can call async functions and use <code>return</code> to provide its result. Like a script, it runs to completion before its return value is available to the caller.</p>
+<table>
+<tr>
+<td width="50%" valign="top">
+<details open>
+<summary><strong>CascadaScript</strong></summary>
+<pre><code class="language-javascript">function buildDepartment(deptId)
+  // These two async calls run concurrently.
+  var manager = fetchManager(deptId)
+  var team = fetchTeamMembers(deptId)
+
+  return { manager: manager.name, teamSize: team.length }
+endfunction
+
+// Call the function. 'salesDept' is the returned object.
+var salesDept = buildDepartment(&quot;sales&quot;)
+
+return { company: { sales: salesDept } }
+</code></pre>
+</details>
+</td>
+<td width="50%" valign="top">
+<details open>
+<summary><strong>Final Return Value</strong></summary>
+<pre><code class="language-json">{
+  &quot;company&quot;: {
+    &quot;sales&quot;: {
+      &quot;manager&quot;: &quot;David&quot;,
+      &quot;teamSize&quot;: 15
+    }
+  }
+}
+</code></pre>
+</details>
+</td>
+</tr>
+</table>
+<h3 id="keyword-arguments" tabindex="-1">Keyword Arguments</h3>
+<p>Functions support keyword arguments, allowing for more explicit and flexible calls. You can define default values for arguments, and callers can pass arguments by name.</p>
+<pre><code class="language-javascript">// Function with default arguments
+function input(name, value=&quot;&quot;, type=&quot;text&quot;)
+  return { name: name, value: value, type: type }
+endfunction
+
+// Calling with mixed and keyword arguments
+var passwordField = input(&quot;pass&quot;, type=&quot;password&quot;)
+return passwordField
+// { name: &quot;pass&quot;, value: &quot;&quot;, type: &quot;password&quot; }
+</code></pre>
+<h3 id="function-handles" tabindex="-1">Function Handles</h3>
+<p>Functions are values in CascadaScript when they stay inside Cascada-controlled code. You can assign a function handle to a variable, store it in an object or array, return it from another function, and pass it directly to a statically known Cascada function:</p>
+<pre><code class="language-javascript">function format(value)
+  return &quot;[&quot; + value + &quot;]&quot;
+endfunction
+
+function apply(fn, value)
+  return fn(value)
+endfunction
+
+function chooseFormatter()
+  return format
+endfunction
+
+var direct = format
+var tools = { format: format }
+var list = [format]
+
+return [
+  direct(&quot;a&quot;),
+  tools.format(&quot;b&quot;),
+  list[0](&quot;c&quot;),
+  chooseFormatter()(&quot;d&quot;),
+  apply(format, &quot;e&quot;)
+]
+</code></pre>
+<p>Direct function handles cannot be returned from the script root, passed directly to native or context functions, or used as ordinary scalar values:</p>
+<pre><code class="language-javascript">return format               // error: root return
+return { fn: format }       // error: root return contains a direct handle
+return nativeApply(format)  // error: native/context call argument
+return &quot;fn=&quot; + format       // error: scalar value use
+</code></pre>
+<p>This validation only checks direct uses. It does not follow aliases, so do not use aliases to work around the rule; that is outside the supported function-handle pattern.</p>
+<p>The same rules apply to imported script functions once they are used as statically known Cascada callables.</p>
+<h3 id="returning-a-computed-value" tabindex="-1">Returning a Computed Value</h3>
+<p>Functions can <code>return</code> any ordinary value directly - a primitive, an object literal, or a variable. Channels themselves are not returned directly; use <code>snapshot()</code> and return the resulting value:</p>
+<pre><code class="language-javascript">function computeTotal(items)
+  var sum = 0
+  for item in items
+    sum = sum + item.price
+  endfor
+  return sum
+endfunction
+
+var total = computeTotal([
+  { price: 10 },
+  { price: 20 },
+  { price: 30 }
+])
+return total  // 60
+</code></pre>
+<h3 id="dynamic-call-blocks-call" tabindex="-1">Dynamic Call Blocks (<code>call</code>)</h3>
+<p>A <code>call</code> block lets you pass a chunk of code to a function as a callback. The function controls when and how that code executes by calling <code>caller()</code> with explicit arguments.</p>
+<h4 id="syntax" tabindex="-1">Syntax</h4>
+<p>In scripts, <code>call</code> blocks must be used in assignment form:</p>
+<pre><code class="language-javascript">var x = call functionName(args)
+  (param1, param2)  // Declare parameters
+  // Block body - use return to provide the value
+  return someValue
+endcall
+</code></pre>
+<p>Or the assignment form without initialization:</p>
+<pre><code class="language-javascript">x = call functionName(args)
+  // ...
+endcall
+</code></pre>
+<p>Bare <code>call</code> blocks (without assignment) are not supported in scripts.</p>
+<p>The function invokes the callback by passing arguments:</p>
+<pre><code class="language-javascript">function functionName(args)
+  var result = caller(value1, value2)
+endfunction
+</code></pre>
+<p>If no parameters are needed, the <code>()</code> can be omitted from the call block.</p>
+<h4 id="example-grid-generator" tabindex="-1">Example: Grid Generator</h4>
+<pre><code class="language-javascript">function grid(rows, cols)
+  data cells = []
+  for y in range(rows)
+    for x in range(cols)
+      var cell = caller(x, y)  // Pass coordinates
+      cells.push(cell)
+    endfor
+  endfor
+  return cells.snapshot()
+endfunction
+
+var gridResult = call grid(3, 3)
+  (x, y)
+  return { position: [x, y], value: x * 10 + y }
+endcall
+
+return gridResult
+</code></pre>
+<h4 id="example-simple-value-transformation" tabindex="-1">Example: Simple Value Transformation</h4>
+<pre><code class="language-javascript">function sum(items)
+  var total = 0
+  for item in items
+    var value = caller(item)
+    total = total + value
+  endfor
+  return total
+endfunction
+
+var result = call sum([{price: 10}, {price: 20}, {price: 30}])
+  (item)
+  return item.price
+endcall
+return result  // 60
+</code></pre>
+<h4 id="example-error-handling" tabindex="-1">Example: Error Handling</h4>
+<pre><code class="language-javascript">function withRetry(maxAttempts)
+  var attempts = 0
+  var result = none
+
+  while attempts &lt; maxAttempts and result is none
+    result = caller()
+    if result is error
+      result = none
+      attempts = attempts + 1
+    endif
+  endwhile
+
+  return result
+endfunction
+
+var userData = call withRetry(3)
+  var user = fetchUser(userId)
+  return user
+endcall
+
+return userData
+</code></pre>
+<h4 id="variable-scope" tabindex="-1">Variable Scope</h4>
+<p>The call block runs with access to variables from where it was written, not the function's internal scope:</p>
+<pre><code class="language-javascript">function processItem(transformer)
+  var internalVar = &quot;function scope&quot;
+  var result = caller(transformer)
+  return result
+endfunction
+
+var outerVar = &quot;call scope&quot;
+
+var processed = call processItem(item)
+  (item)
+  // Can access outerVar; Cannot access internalVar
+  return { item: item, context: outerVar }
+endcall
+
+return processed
+</code></pre>
+<p>The call block's access to the parent scope is read-only:</p>
+<ul>
+<li><strong>Reads</strong> can see variables from the parent scope (where the call block was written).</li>
+<li><strong>Assignments</strong> to visible parent variables are rejected.</li>
+<li><strong>Fresh <code>var</code> declarations</strong> inside the call block stay local to the call block and must not reuse a visible parent name.</li>
+</ul>
+<p>This ensures the call block remains decoupled from the function's implementation details.</p>
+<h4 id="how-call-blocks-work" tabindex="-1">How Call Blocks Work</h4>
+<ul>
+<li><strong>Parameters</strong>: The function explicitly passes values via <code>caller(args)</code>, declared as <code>(params)</code> in the call block header</li>
+<li><strong>Return value</strong>: The value provided by <code>return</code> in the call block body is returned by <code>caller()</code> in the function</li>
+<li><strong>Caller's context</strong>: The block reads variables from the scope where it was written, not the function's internal scope</li>
+<li><strong>Execution control</strong>: The function decides when - and how many times - to invoke <code>caller()</code></li>
+<li><strong>Isolated scope</strong>: Writes inside the call block stay local; the function sees only what <code>caller()</code> returns</li>
+</ul>
+<h3 id="error-handling-and-recovery-with-functions" tabindex="-1">Error handling and recovery with functions</h3>
+<p>Functions participate in the normal dataflow poisoning rules, but they are still called with poisoned arguments and can handle those Error Values explicitly inside the function body. For comprehensive information on error handling and recovery patterns, see the <a href="#error-handling">Error Handling</a> section.</p>
+<h2 id="error-handling" tabindex="-1">Error Handling</h2>
+<p>Cascada's concurrent-by-default execution creates a unique challenge: when multiple operations run concurrently and one fails, traditional exception-based error handling would need to interrupt the entire execution graph, halting all independent work. Instead, Cascada treats errors as just another type of data that flows through your script. Failed operations produce a special Error Value that is stored in variables, passed to functions, and can be inspected.</p>
+<p>This data-centric model allows independent operations to continue running while failures are isolated to only the variables and operations that depend on the failed result.</p>
+<h3 id="error-handling-fundamentals" tabindex="-1">Error Handling Fundamentals</h3>
+<h4 id="error-handling-in-action" tabindex="-1">Error Handling in Action</h4>
+<p>Here's a concrete example showing how error propagation works in concurrent execution:</p>
+<pre><code class="language-javascript">// These three API calls run concurrently
+var user = fetchUser(123)      // succeeds
+var posts = fetchPosts(123)    // fails with network error
+var comments = fetchComments() // succeeds
+
+// Only operations depending on 'posts' are affected
+var username = user.name           // works fine
+var commentCount = comments.length // works fine
+var postCount = posts.length       // becomes an error
+var summary = posts + &quot; analysis&quot;  // becomes an error
+
+// You can detect and repair the error
+if posts is error
+  postCount = 0  // assign a fallback
+  summary = ''   // assign a fallback
+endif
+
+return { username: username, commentCount: commentCount, postCount: postCount, summary: summary }
+</code></pre>
+<h4 id="the-core-mechanism-error-propagation" tabindex="-1">The Core Mechanism: Error Propagation</h4>
+<p>Once an Error Value is created, it automatically spreads to any dependent operation or variable - this process is known as error propagation, dataflow poisoning, or just poisoning. This ensures that corrupted data never silently produces incorrect results.</p>
+<h4 id="data-operations-1" tabindex="-1">Data Operations</h4>
+<ul>
+<li>
+<p><strong>Expressions:</strong>
+If any operand in an expression is an error, the entire expression evaluates to that error.</p>
+<pre><code class="language-javascript">var total = myError + 5  // total becomes myError
+var result = 10 * myError / 2  // result becomes myError
+</code></pre>
+<p>An operation that produces <code>NaN</code> (such as <code>0 / 0</code>) also becomes an Error Value; <code>Infinity</code> stays a normal value.</p>
+</li>
+<li>
+<p><strong>Function Calls:</strong>
+If an Error Value is passed as an argument, the function still receives it and can detect or repair it explicitly.</p>
+<pre><code class="language-javascript">function processData(value)
+  if value is error
+    return &quot;fallback&quot;
+  endif
+  return value.name
+endfunction
+
+var result = processData(myError)  // &quot;fallback&quot;
+</code></pre>
+</li>
+</ul>
+<h4 id="control-flow-1" tabindex="-1">Control Flow</h4>
+<ul>
+<li>
+<p><strong>Loops:</strong>
+A loop whose iterable is an Error Value will not execute its body. The error propagates to all variables and outputs that would have been affected.</p>
+<pre><code class="language-javascript">var itemCount = 0
+for item in myErrorList
+itemCount = itemCount + 1
+endfor
+// itemCount is now poisoned
+</code></pre>
+</li>
+<li>
+<p><strong>Conditionals:</strong>
+If a conditional test evaluates to an Error Value, neither the <code>if</code> nor <code>else</code> branch executes. The error propagates to all variables modified by either branch.</p>
+<pre><code class="language-javascript">if myErrorCondition
+  result = &quot;yes&quot;
+else
+  result = &quot;no&quot;
+endif
+// The 'result' variable is now an Error Value
+</code></pre>
+</li>
+</ul>
+<h4 id="poisoning-channels-and-sequencing-constructs" tabindex="-1">Poisoning Channels and Sequencing Constructs</h4>
+<ul>
+<li>
+<p><strong>Channels:</strong>
+If an Error Value is written to a channel, that channel becomes poisoned, causing the script to fail when the channel is read or returned.</p>
+</li>
+<li>
+<p><strong>Sequence Objects:</strong>
+If a read or call through a <code>sequence</code> object fails, that sequence becomes poisoned. Later operations through the same sequence immediately yield an Error Value without executing until the sequence is recovered with <code>guard</code>.</p>
+</li>
+<li>
+<p><strong>Sequential <code>!</code> Paths:</strong>
+If a call in a sequential execution path (marked with <code>!</code>) fails, that path becomes poisoned. Later operations using the same <code>!path</code> will instantly yield an Error Value without executing.</p>
+<pre><code class="language-javascript">context.database!.connect()      // fails
+context.database!.insert(record) // skipped, returns error immediately
+context.database!.commit()       // skipped, returns error immediately
+</code></pre>
+</li>
+</ul>
+<p>This mechanism ensures that once an operation fails, all dependent results, channels, and sequencing constructs reflect that failure, maintaining data integrity across both concurrent and sequential execution flows.</p>
+<h4 id="deciding-when-to-handle-errors" tabindex="-1">Deciding When to Handle Errors</h4>
+<p><strong>Do not handle errors, let them propagate when:</strong></p>
+<ul>
+<li>The operation is critical to the final output</li>
+<li>You want the entire script to fail if this operation fails</li>
+<li>The error should bubble up to the calling JavaScript/TypeScript code</li>
+<li>There's no reasonable fallback or default value</li>
+<li>You're building a strict data pipeline where partial results are unacceptable</li>
+</ul>
+<p><strong>Handle errors locally when:</strong></p>
+<ul>
+<li>You have a sensible fallback or default value</li>
+<li>The operation is optional or non-critical</li>
+<li>You're implementing retry logic for transient failures</li>
+<li>You're aggregating results where partial success is acceptable</li>
+<li>You want to collect multiple errors for reporting without halting execution</li>
+<li>The error represents a business-logic case that should produce specific output (e.g., &quot;user not found&quot; → guest mode)</li>
+</ul>
+<pre><code class="language-javascript">// Critical operation - let it propagate and fail the script
+var primaryData = fetchCriticalData()
+
+// Optional enhancement - handle locally
+var recommendations = fetchRecommendations()
+if recommendations is error
+  recommendations = []  // Not critical, use empty array as fallback
+endif
+
+return { report: primaryData.summary, recommendations: recommendations }
+</code></pre>
+<h4 id="how-scripts-fail" tabindex="-1">How Scripts Fail</h4>
+<p>A script fails only if the value you return is an Error Value.</p>
+<p>A statement run only for its side effect - a bare call, or <code>{% do %}</code> in templates - discards its result, so if it fails the error has no consumer and is dropped. Bind the result if you need to detect it.</p>
+<p>You can have poisoned values inside the script and still succeed, as long as you repair them or avoid returning them:</p>
+<pre><code class="language-javascript">var user = fetchUser(999)  // Returns an error
+
+if user is error
+  user = { name: &quot;Guest&quot; }  // Repaired
+endif
+
+return user.name  // Script succeeds: &quot;Guest&quot;
+</code></pre>
+<p>If the returned value is still poisoned, the script fails:</p>
+<pre><code class="language-javascript">var user = fetchUser(999)  // Returns an error
+return user.name  // Script fails
+</code></pre>
+<h4 id="errors-thrown-by-render-methods" tabindex="-1">Errors Thrown by Render Methods</h4>
+<p>JavaScript render methods such as <code>renderScript(...)</code>,
+<code>renderScriptString(...)</code>, <code>renderTemplate(...)</code>, and
+<code>renderTemplateString(...)</code> reject with Cascada error objects when rendering
+cannot produce a healthy result:</p>
+<ul>
+<li><strong><code>CompileError</code></strong>: The script or template could not be compiled. This is a
+synchronous source error with <code>lineno</code>, <code>colno</code>, <code>path</code>, <code>label</code>,
+<code>description</code>, <code>fullMessage</code>, and <code>context</code>.</li>
+<li><strong><code>RuntimeError</code></strong>: A fatal runtime failure occurred, such as an invalid
+runtime contract, inheritance/load failure, or internal structural error.
+It exposes the same diagnostic fields as other render errors.</li>
+<li><strong><code>PoisonError</code></strong>: The rendered result depends on one failed operation.</li>
+<li><strong><code>PoisonErrorGroup</code></strong>: The rendered result depends on multiple failed
+operations. Its <code>errors[]</code> entries are the individual <code>PoisonError</code> objects.</li>
+</ul>
+<p>All render errors expose <code>message</code>, <code>description</code>, <code>fullMessage</code>, and
+<code>context</code>. <code>PoisonError</code> and <code>PoisonErrorGroup</code> are the same shapes returned by
+the <code>#</code> peek operator. <code>RuntimeError</code> is fatal and is not part of dataflow
+recovery.</p>
+<p>To distinguish error types in JavaScript <code>catch</code> blocks, use <code>instanceof</code>.
+Since <code>PoisonErrorGroup extends PoisonError</code>, a single <code>instanceof PoisonError</code>
+check catches both:</p>
+<pre><code class="language-javascript">import { PoisonError, CompileError, RuntimeError } from 'cascada-engine';
+
+try {
+  const result = await env.renderScript(script, context);
+} catch (err) {
+  if (err instanceof PoisonError) {
+    // Catches both PoisonError and PoisonErrorGroup; they share the same interface
+    for (const e of err.errors) {
+      console.error(e.fullMessage);
+    }
+  } else if (err instanceof CompileError) {
+    // Source could not be compiled
+    console.error(err.message);
+  } else if (err instanceof RuntimeError) {
+    // Fatal contract violation
+    throw err;
+  }
+}
+</code></pre>
+<h3 id="detecting-and-inspecting-errors" tabindex="-1">Detecting and Inspecting Errors</h3>
+<h4 id="detecting-and-repairing-errors" tabindex="-1">Detecting and Repairing Errors</h4>
+<p>The fundamental way to detect if a variable holds an Error Value is the <code>is error</code> test. Once detected, you can &quot;repair&quot; it by re-assigning the variable.</p>
+<p><strong>Example: Assigning a Fallback Value</strong></p>
+<pre><code class="language-javascript">var user = fetchUser(999)  // assumed to fail
+
+if user is error
+  var msg = user#message  // peek at the error details
+  user = { name: &quot;Guest&quot;, isDefault: true }
+endif
+
+return user.name  // 'Alice' or 'Guest' depending on success
+</code></pre>
+<p><strong>Example: Retrying a Failed Operation</strong></p>
+<pre><code class="language-javascript">var retries = 0
+var user
+var success = false
+
+while retries &lt; 3 and not success
+  user = fetchUser(123)
+  if user is not error
+    success = true
+  else
+    retries = retries + 1
+  endif
+endwhile
+
+if user is error
+  user = { name: &quot;Guest&quot;, isDefault: true }
+endif
+
+return user
+</code></pre>
+<h4 id="peeking-inside-errors-with" tabindex="-1">Peeking Inside Errors with <code>#</code></h4>
+<p>Because of error propagation, a standard property access like <code>myError.message</code> would just return <code>myError</code> again. To inspect the properties of an Error Value itself, use the special <code>#</code> (peek) operator. This operator &quot;reaches through&quot; the error to access its internal properties without triggering propagation.</p>
+<pre><code class="language-javascript">var failedUser = fetchUser(999)
+
+if failedUser is error
+  var message = failedUser#message
+  var path = failedUser#errors[0].path
+  var line = failedUser#errors[0].lineno
+endif
+</code></pre>
+<p><strong><code>x#</code> returns <code>none</code> when <code>x</code> is not an error.</strong> Always check with <code>is error</code> before peeking:</p>
+<pre><code class="language-javascript">context.db!.insert(data)  // Succeeds
+
+// WRONG: Peeking at healthy value returns none, not an error
+var msg = context.db!#message  // none - not useful
+
+// CORRECT: Check first, then peek
+var msg
+if context.db! is error
+  msg = context.db!#message  // Safe
+endif
+</code></pre>
+<h4 id="anatomy-of-an-error-value" tabindex="-1">Anatomy of an Error Value</h4>
+<p>Peeking returns the poison error for that value, or <code>none</code> when the value is
+healthy. A single failure returns a <code>PoisonError</code>, multiple failures a
+<code>PoisonErrorGroup</code>. Both expose the same interface, so most code handles them
+uniformly. Access the poison error with <code>#</code>.</p>
+<p><code>PoisonError</code> represents one failed operation. It exposes these fields:</p>
+<ul>
+<li><strong><code>description</code></strong>: (string) The cause's message text, without the error type prefix, source location, or stack.</li>
+<li><strong><code>message</code></strong>: (string) Two-line compact diagnostic: the error type and description on the first line, the source location on the second.</li>
+<li><strong><code>fullMessage</code></strong>: (string) The same first two lines as <code>message</code>, plus the Cascada diagnostic stack when available.</li>
+<li><strong><code>context</code></strong>: (object) The normalized diagnostic context for the failure. May include extra metadata such as <code>callSignature</code>, <code>loop</code>, or <code>branch</code> that appear in the formatted messages.</li>
+<li><strong><code>errors</code></strong>: (array) A single-item array containing the error itself: <code>[this]</code>.</li>
+<li><strong><code>name</code></strong>: (string) Always <code>'PoisonError'</code>.</li>
+<li><strong><code>lineno</code></strong>: (number) The line number where the error occurred.</li>
+<li><strong><code>colno</code></strong>: (number) The column number.</li>
+<li><strong><code>path</code></strong>: (string) The script file where the error originated.</li>
+<li><strong><code>label</code></strong>: (string) The raw compiler classification token for the source operation (e.g., <code>'FunCall'</code>, <code>'LookupVal'</code>, <code>'Divide'</code>). The formatted <code>message</code> renders this as a human-readable phrase such as <code>call fetchUser(...)</code>.</li>
+<li><strong><code>kind</code></strong>: (string) A stable code naming <strong>what</strong> failed, independent of <code>label</code> (which names <strong>where</strong>). Useful for inspection, but treat it as diagnostic metadata, not a frozen API - the set may grow.</li>
+<li><strong><code>cause</code></strong>: (Error) The original JavaScript <code>Error</code> object. Always present on <code>PoisonError</code>.</li>
+</ul>
+<h5 id="the-kind-property" tabindex="-1">The <code>kind</code> Property</h5>
+<p>The <code>kind</code> values below are <strong>strings</strong> carried in the <code>kind</code> field - not error classes. When
+this documentation says a failure &quot;is an <code>UnknownVariable</code>&quot; or &quot;produces a <code>NaNResult</code>&quot;, it means
+<code>error.kind === 'UnknownVariable'</code>; the runtime class is always <code>PoisonError</code> / <code>PoisonErrorGroup</code>.</p>
+<table>
+<thead>
+<tr>
+<th><code>kind</code></th>
+<th>Failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MissingFunction</code></td>
+<td>called name resolved to <code>undefined</code> - no such function/method or context property</td>
+</tr>
+<tr>
+<td><code>NotAFunction</code></td>
+<td>call target is some other type, not a function</td>
+</tr>
+<tr>
+<td><code>UserCallThrew</code></td>
+<td>a called function, filter, data method, or sequence method threw</td>
+</tr>
+<tr>
+<td><code>UnknownVariable</code></td>
+<td>bare variable read names a missing context/global/script symbol</td>
+</tr>
+<tr>
+<td><code>NullLookup</code></td>
+<td>property read on <code>null</code>/<code>undefined</code></td>
+</tr>
+<tr>
+<td><code>ScalarLookup</code></td>
+<td>script property read on a scalar primitive with no such property</td>
+</tr>
+<tr>
+<td><code>LookupThrew</code></td>
+<td>a property getter threw</td>
+</tr>
+<tr>
+<td><code>IteratorThrew</code></td>
+<td>a loop iterator or generator threw</td>
+</tr>
+<tr>
+<td><code>NotIterable</code></td>
+<td>script loop source or <code>in</code> right-hand operand is not a collection</td>
+</tr>
+<tr>
+<td><code>NotDestructurable</code></td>
+<td>loop element is not array-like for multi-variable destructuring; use <code>for a, b in [[1, 2]]</code>, not <code>for a, b in [1, 2]</code></td>
+</tr>
+<tr>
+<td><code>InvalidConcurrentLimit</code></td>
+<td><code>of</code> limit is not a positive number</td>
+</tr>
+<tr>
+<td><code>IncompatibleOperands</code></td>
+<td>script operator operands have incompatible types</td>
+</tr>
+<tr>
+<td><code>DivideByZero</code></td>
+<td>BigInt division or modulo by zero</td>
+</tr>
+<tr>
+<td><code>LoadFailed</code></td>
+<td>a non-fatal <code>import</code>/<code>component</code>/<code>include</code> load failed</td>
+</tr>
+<tr>
+<td><code>ImportBindingMissing</code></td>
+<td>imported name is not exported by the module</td>
+</tr>
+<tr>
+<td><code>NaNResult</code></td>
+<td>a computation produced <code>NaN</code> (<code>Infinity</code> stays a value)</td>
+</tr>
+<tr>
+<td><code>InvalidTextValue</code></td>
+<td>a value that cannot be converted to text, such as a plain object without text output, a function, or a symbol</td>
+</tr>
+<tr>
+<td><code>ContextValueRejected</code></td>
+<td>a promise supplied by the render context (or returned directly) rejected</td>
+</tr>
+</tbody>
+</table>
+<p>The single-item <code>errors</code> array is intentional. It lets code process standalone
+and grouped poison errors the same way:</p>
+<pre><code class="language-javascript">var err = value#
+each item in err.errors
+  log(item.message)
+endeach
+</code></pre>
+<p><code>PoisonErrorGroup</code> represents multiple failures. The aggregate fields override
+the inherited ones:</p>
+<ul>
+<li><strong><code>name</code></strong>: (string) Always <code>'PoisonErrorGroup'</code>.</li>
+<li><strong><code>kind</code></strong>: (string) Derived: the shared child <code>kind</code> if they all agree, otherwise <code>'Multiple'</code>.</li>
+<li><strong><code>kinds</code></strong>: (array) The sorted unique child <code>kind</code>s.</li>
+<li><strong><code>totalErrorCount</code></strong>: (number) The full number of failures.</li>
+<li><strong><code>description</code></strong>: (string) A short aggregate description such as <code>Multiple errors occurred (3)</code>.</li>
+<li><strong><code>message</code></strong>: (string) An aggregate intro followed by numbered child <code>message</code> values. When the failures exceed the message cap, the header also summarizes the total count and the kinds present.</li>
+<li><strong><code>fullMessage</code></strong>: (string) The same aggregate intro, with each child's own stack.</li>
+<li><strong><code>errors</code></strong>: (array) <strong>All</strong> the individual <code>PoisonError</code> objects, sorted by source location, each with its own context and cause. The <code>message</code> is capped for readability; <code>errors</code> is not.</li>
+</ul>
+<p>The following fields are inherited from <code>PoisonError</code> and come from the first
+child error, so single-error and multi-error handling code can stay the same:</p>
+<ul>
+<li><strong><code>cause</code></strong></li>
+<li><strong><code>context</code></strong></li>
+<li><strong><code>lineno</code></strong></li>
+<li><strong><code>colno</code></strong></li>
+<li><strong><code>path</code></strong></li>
+<li><strong><code>label</code></strong></li>
+</ul>
+<p>All individual child locations remain available through <code>errors[]</code>.</p>
+<p><code>error.message</code> - compact, two lines:</p>
+<pre><code class="language-text">PoisonError: service failed
+(report.casc) [Line 4, Column 12] call fetchUser (argument names=[userId])
+</code></pre>
+<p><code>error.fullMessage</code> - same header, plus the Cascada execution trace when
+available:</p>
+<pre><code class="language-text">PoisonError: service failed
+(report.casc) [Line 4, Column 12] call fetchUser (argument names=[userId])
+Stack:
+  1. (report.casc) [Line 3, Column 2] call enrichUser(user)
+  2. (report.casc) [Line 2, Column 0] For (loop variables=[user])
+  3. (report.casc) [Line 1, Column 0] Root (entry name=root)
+</code></pre>
+<p>When the first stack frame matches the primary source location, Cascada
+omits the duplicate and prints it only once.</p>
+<p>The diagnostic stack is a Cascada execution trace, not just a function-call
+stack. It can include loops, branches, macros, imports, includes, and other
+runtime steps when they help explain where the error surfaced.</p>
+<h4 id="handling-multiple-errors" tabindex="-1">Handling Multiple Errors</h4>
+<p>When a value depends on multiple poisoned inputs, their errors are collected
+into a single aggregate poison error (<code>PoisonErrorGroup</code>). The failures may have
+happened concurrently, sequentially, or simply propagated through different
+dataflow paths. The group's <code>.errors[]</code> entries are individual <code>PoisonError</code>s
+with their original source locations.</p>
+<pre><code class="language-javascript">var user = fetchUser(999)        // fails
+var profile = fetchProfile(999)  // fails
+var settings = fetchSettings(999) // fails
+
+var summary = user.name + &quot; - &quot; + profile.bio + &quot; - &quot; + settings.theme
+
+if summary is error
+  var count = summary#errors | length  // 3
+
+  data errorList = []
+  each err in summary#errors
+    errorList.push({
+      message: err.message,
+      path: err.path,
+      line: err.lineno,
+      column: err.colno,
+      label: err.label
+    })
+  endeach
+
+  summary = &quot;User data unavailable&quot;
+endif
+</code></pre>
+<p>This shows every failure that contributed to the poisoned value, not just the
+first one.</p>
+<h3 id="advanced-recovery-mechanisms" tabindex="-1">Advanced Recovery Mechanisms</h3>
+<h4 id="repairing-sequential-paths-with" tabindex="-1">Repairing Sequential Paths with <code>!!</code></h4>
+<p>When a sequential path becomes poisoned, the <code>!!</code> operator provides two ways to recover:</p>
+<p><strong>Repair the Path:</strong>
+Use <code>!!</code> alone to clear the poison state.</p>
+<pre><code class="language-javascript">context.db!.insert(data)  // Fails and poisons the path
+
+context.db!!  // Repairs the path
+
+context.db!.insert(otherData)  // Now executes
+</code></pre>
+<p><strong>Repair and Execute:</strong>
+Use <code>!!</code> before a method call to repair the path and then execute the method.</p>
+<pre><code class="language-javascript">context.db!.beginTransaction()
+context.db!.insert(userData)      // Fails, poisons path
+context.db!.insert(profileData)   // Skipped due to poison
+
+// Repairs path and executes rollback
+context.db!!.rollback()
+</code></pre>
+<p>This is particularly useful for cleanup operations that must run regardless of failure:</p>
+<pre><code class="language-javascript">var file = context.fileSystem!.open(path)
+context.fileSystem!.writeHeader(metadata)
+var writeResult = context.fileSystem!.writeData(data)  // Might fail
+
+// Always close the file, even if writes failed
+context.fileSystem!!.close()
+</code></pre>
+<p><strong>Checking Path State:</strong></p>
+<pre><code class="language-javascript">context.api!.sendRequest(data)  // Might fail
+
+if context.api! is error
+  var message = context.api!#message
+  context.api!!  // Repair the path
+endif
+</code></pre>
+<h4 id="protecting-state-with-guard" tabindex="-1">Protecting State with <code>guard</code></h4>
+<p>The <code>guard</code> block provides controlled, transaction-like recovery for your script. It allows you to attempt complex operations with the confidence that if something goes wrong, Cascada will automatically restore selected state.</p>
+<p>You can think of <code>guard</code> like a save point: if the block finishes in an error, the specified state is restored before recovery logic runs.</p>
+<h4 id="syntax-1" tabindex="-1">Syntax</h4>
+<pre><code class="language-javascript">guard [targets...]
+  // 1. Attempt risky operations
+  // 2. Changes to guarded targets are tracked for recovery
+recover [err]  // Optional recover block; 'err' variable binding is also optional
+  // 3. Runs ONLY if the guard block remains poisoned
+  // 4. Guarded state has already been restored
+endguard
+</code></pre>
+<hr>
+<h4 id="default-protection-guarded-state" tabindex="-1">Default Protection: Guarded State</h4>
+<p>By default, a <code>guard</code> block (with no arguments) protects:</p>
+<ol>
+<li>
+<p>All channels (<code>data</code>, <code>text</code>) and sequence objects (<code>sequence</code>)
+Channel writes made inside the block are discarded on error.
+For sequence objects, this is also the built-in way to recover from poisoning. If the underlying object provides <code>begin()</code>, <code>commit()</code>, and <code>rollback()</code> hooks, <code>guard</code> uses them automatically. Missing hooks are tolerated. Hook errors become guard errors.</p>
+</li>
+<li>
+<p>All sequential paths (<code>!</code>)
+If a path such as <code>db!</code> becomes poisoned, it is automatically repaired with <code>!!</code>.
+Paths are hierarchical - guarding <code>api!</code> also guards <code>api.db!</code>, <code>api.connection!</code>, etc.</p>
+</li>
+</ol>
+<p><strong>Variables are NOT protected by default.</strong></p>
+<h5 id="example-database-transaction" tabindex="-1">Example: Database Transaction</h5>
+<pre><code class="language-javascript">// db! is a sequential path from context
+db!.beginTransaction()
+
+data out
+
+guard
+  out.status = &quot;processing&quot;
+
+  db!.insert(user)
+  db!.update(account) // Assume this fails
+
+  db!.commit()
+  out.status = &quot;success&quot;
+
+recover err
+  // STATE RESTORED:
+  // - data channel writes inside the guard are reverted
+  // - db! is repaired and safe to use
+
+  db!.rollback()
+  out.error = &quot;Transaction failed: &quot; + err.message
+endguard
+
+return out.snapshot()
+</code></pre>
+<h5 id="example-guarding-a-sequence-object" tabindex="-1">Example: Guarding a <code>sequence</code> Object</h5>
+<pre><code class="language-javascript">sequence tx = services.tx
+var state = &quot;starting&quot;
+
+guard tx, state
+  state = &quot;running&quot;
+  tx.step(&quot;A&quot;)
+  tx.fail()
+  state = &quot;done&quot;
+recover err
+  state = &quot;rolled back&quot;
+endguard
+</code></pre>
+<hr>
+<h4 id="selective-protection" tabindex="-1">Selective Protection</h4>
+<p>You can explicitly specify what the guard should protect.</p>
+<pre><code class="language-javascript">// Protects the out data channel, the db! path, and the 'status' variable
+guard out, db!, status
+</code></pre>
+<h5 id="selectors" tabindex="-1">Selectors</h5>
+<table>
+<thead>
+<tr>
+<th>Selector</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>guard</code> (no selectors)</td>
+<td>Global guard: protects all channels, sequence objects, and sequential paths touched inside the block</td>
+</tr>
+<tr>
+<td><code>guard *</code></td>
+<td>Protect everything (all channels, sequence objects, all sequential paths, all visible variables written inside the guard)</td>
+</tr>
+<tr>
+<td><code>guard var</code></td>
+<td>Protect all visible variables written inside the guard</td>
+</tr>
+<tr>
+<td><code>guard data</code></td>
+<td>Protect all <code>data</code> channel declarations touched inside the guard</td>
+</tr>
+<tr>
+<td><code>guard text</code></td>
+<td>Protect all <code>text</code> channel declarations touched inside the guard</td>
+</tr>
+<tr>
+<td><code>guard sequence</code></td>
+<td>Protect all <code>sequence</code> declarations touched inside the guard</td>
+</tr>
+<tr>
+<td><code>guard name1, name2</code></td>
+<td>Protect specific declaration names (channels, sequence objects, or variables)</td>
+</tr>
+<tr>
+<td><code>guard lock!</code></td>
+<td>Protect a specific sequential path (e.g., <code>db!</code>)</td>
+</tr>
+<tr>
+<td><code>guard !</code></td>
+<td>Protect all sequential paths touched inside the guard</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Rules:</strong></p>
+<ul>
+<li><code>*</code> cannot be combined with any other selector</li>
+<li>Duplicate selectors are invalid</li>
+<li>The <code>lock!</code> and <code>!</code> selectors are for sequential paths, not <code>sequence</code> objects</li>
+</ul>
+</blockquote>
+<p><strong>Hierarchical Protection of Sequential Paths:</strong></p>
+<pre><code class="language-javascript">guard api!
+  api!.connect()
+  api.db!.insert(data)         // Also protected (child of api!)
+  api.connection!.setState(s)  // Also protected (child of api!)
+endguard
+</code></pre>
+<h5 id="example-protecting-specific-variables-or-channel-types" tabindex="-1">Example: Protecting Specific Variables or Channel Types</h5>
+<pre><code class="language-javascript">var attempts = 0
+var lastLog = &quot;&quot;
+data result
+
+guard attempts, data
+  attempts = attempts + 1
+  result.try = attempts
+  lastLog = &quot;Trying...&quot;  // not protected
+
+  riskyOperation() // Fails
+recover err
+  // 'attempts' is restored to 0
+  // 'data' channel writes are reverted (all data channels)
+  // 'lastLog' remains &quot;Trying...&quot; (not protected, so not restored)
+endguard
+</code></pre>
+<hr>
+<h4 id="guard-protect-everything" tabindex="-1"><code>guard *</code> (Protect Everything)</h4>
+<pre><code class="language-javascript">guard *
+  var x = calculate()
+  var y = fetch()
+endguard
+</code></pre>
+<p><strong>Performance warning</strong>
+When variables are protected (via <code>guard *</code>, <code>guard var</code>, or explicit variable names), any code that depends on such variables must wait for the guard to finish. This can reduce concurrency. Use <code>guard *</code> only for small, tightly scoped operations.</p>
+<hr>
+<h4 id="the-recover-block" tabindex="-1">The <code>recover</code> Block</h4>
+<p>The <code>recover</code> block is optional. If omitted, the guard silently restores protected state and execution continues after <code>endguard</code>.</p>
+<p>If present, it runs only if the guard finishes poisoned:</p>
+<ul>
+<li>Guarded <code>data</code>, <code>text</code>, and <code>sequence</code> declarations have already been reverted</li>
+<li>Guarded sequential paths have already been repaired</li>
+<li>Guarded variables have already been restored</li>
+<li><code>recover err</code> binds the final poison error; read <code>err.message</code> for a combined message or inspect <code>err.errors</code> in host JavaScript. The variable name is optional; bare <code>recover</code> (without a binding) is also valid</li>
+</ul>
+<blockquote>
+<p>Note: If all errors are detected and repaired inside the guard (using <code>is error</code>), the guard is considered successful and no recovery occurs.</p>
+</blockquote>
+<h4 id="manually-reverting-guarded-state" tabindex="-1">Manually Reverting Guarded State</h4>
+<blockquote>
+<p><strong>Work in progress:</strong> The <code>revert</code> statement for manually resetting guarded state inside a <code>guard</code> block is not yet available in script mode.</p>
+</blockquote>
+<p>When implemented, <code>revert</code> will reset all <code>data</code>, <code>text</code>, and <code>sequence</code> declarations in the current scope to their state at the start of the nearest enclosing scope boundary (e.g., the start of the <code>guard</code> block). This provides fine-grained control complementing automatic guard recovery.</p>
+<h4 id="error-handling-with-sequential-operations" tabindex="-1">Error Handling with Sequential Operations</h4>
+<pre><code class="language-javascript">db!.beginTransaction()
+
+var insertResult = db!.insert(&quot;users&quot;, userData)
+var updateResult = db!.update(&quot;profiles&quot;, profileData)
+
+var status
+var errorMsg
+
+if db! is error
+  db!!.rollback()
+  status = &quot;transaction_failed&quot;
+  errorMsg = db!#message
+else
+  db!.commit()
+  status = &quot;success&quot;
+endif
+
+return { status: status, error: errorMsg }
+</code></pre>
+<h2 id="return-statements" tabindex="-1">Return Statements</h2>
+<p>Use <code>return</code> to explicitly shape what a script, function, method, or call block
+produces. After a <code>return</code> runs, later statements in that same callable body are
+skipped.</p>
+<pre><code class="language-javascript">// Return a simple value
+return 42
+
+// Return no value
+return
+
+// Return an explicit null value
+return none
+
+// Return a variable
+return user
+
+// Return an object literal
+return { name: user.name, count: items.length }
+
+// Build with plain variables and return them directly
+var report = { name: user.name, count: items.length }
+return report
+
+// Use snapshot() only when you are intentionally observing ordered work
+data reportData
+reportData.user.name = &quot;Alice&quot;
+return reportData.snapshot()
+</code></pre>
+<p><code>snapshot()</code> captures the assembled value at that point, waiting for all pending writes to complete. It can be called anywhere after the declaration is made.</p>
+<p>For most cases, returning a <code>var</code> or a plain object literal is simpler than declaring <code>data</code>, <code>text</code>, or <code>sequence</code>. Use <code>data</code>/<code>text</code> when you need ordered writes, structured path updates, or text building; use <code>sequence</code> when you need an ordered interface to an external object.</p>
+<p>If no <code>return</code> runs, or if you use bare <code>return</code>, the JavaScript API resolves
+with <code>null</code>, the same value used for Cascada <code>none</code>.</p>
+<h2 id="composition-and-loading" tabindex="-1">Composition and Loading</h2>
+<p>When a project grows beyond a single file, CascadaScript provides two file-composition tools plus component instances:</p>
+<ul>
+<li><strong><code>import</code></strong> - load a library of reusable functions from another file</li>
+<li><strong><code>extends</code> / <code>method</code></strong> - inherit a base script's structure and override specific behaviors</li>
+<li><strong><code>component</code></strong> - create isolated, independently-stateful instances of a script hierarchy</li>
+</ul>
+<p><code>import</code> and <code>component</code> use <code>with</code> to pass input values into the composed file. <code>extends</code> is different: the render context flows through the inheritance chain automatically. These are covered in detail in the sections below.</p>
+<h3 id="importing-libraries-with-import" tabindex="-1">Importing Libraries with <code>import</code></h3>
+<p>Use <code>import</code> to share public root-scope declarations across multiple scripts - helper functions, reusable constants, and assembled channel values - without duplicating them. Public declarations are root-scope names that do not start with <code>_</code>. Exported non-<code>shared</code> channel declarations are exposed through their final snapshots, so importing a <code>text</code> or <code>data</code> channel gives the assembled value rather than the channel object itself. <code>shared</code> declarations belong to <code>extends</code>/<code>component</code> state and are accessed through <code>this.&lt;name&gt;</code>, not through import namespaces.</p>
+<h4 id="importing-a-namespace-with-as" tabindex="-1">Importing a Namespace with <code>as</code></h4>
+<p>Bind the library to a name and call its functions through that namespace:</p>
+<pre><code class="language-cascada">// formatters.script
+function formatUser(user)
+  return user.firstName + &quot; &quot; + user.lastName
+endfunction
+</code></pre>
+<pre><code class="language-cascada">// main.script
+import &quot;formatters.script&quot; as fmt
+
+var user = fetchUser(1)
+return { name: fmt.formatUser(user) }
+</code></pre>
+<p>This returns <code>{ name: &quot;Alice Durand&quot; }</code>.</p>
+<h4 id="importing-specific-names-with-from" tabindex="-1">Importing Specific Names with <code>from</code></h4>
+<p>Pull specific functions directly into the caller's namespace instead:</p>
+<pre><code class="language-cascada">// formatters.script - same file as above
+function formatUser(user)
+  return user.firstName + &quot; &quot; + user.lastName
+endfunction
+</code></pre>
+<pre><code class="language-cascada">// main.script
+from &quot;formatters.script&quot; import formatUser
+
+var user = fetchUser(1)
+return { name: formatUser(user) }
+</code></pre>
+<p>This returns <code>{ name: &quot;Alice Durand&quot; }</code>.</p>
+<p>Use <code>as</code> when importing several functions from the same library; use <code>from ... import</code> when you only need one or two specific names directly in scope.</p>
+<h4 id="passing-values-to-libraries-with-with" tabindex="-1">Passing Values to Libraries with <code>with</code></h4>
+<p>A library can read payload values passed by the caller with <code>with</code>. Here the same library is enriched with a configurable <code>locale</code>:</p>
+<pre><code class="language-cascada">// formatters.script
+function formatUser(user)
+  var selectedLocale = locale or &quot;en&quot;
+  return user.firstName + &quot; &quot; + user.lastName + &quot; [&quot; + selectedLocale + &quot;]&quot;
+endfunction
+</code></pre>
+<pre><code class="language-cascada">// main.script
+var locale = &quot;fr&quot;
+import &quot;formatters.script&quot; as fmt with locale
+
+var user = fetchUser(1)
+return { user: fmt.formatUser(user) }
+</code></pre>
+<p>This returns <code>{ user: &quot;Alice Durand [fr]&quot; }</code>.</p>
+<p>Instead of passing an explicit var, you can expose the render context as payload:</p>
+<pre><code class="language-cascada">// main.script - locale comes from the render context, no child var needed
+import &quot;formatters.script&quot; as fmt with context
+
+var user = fetchUser(1)
+return { user: fmt.formatUser(user) }
+</code></pre>
+<p>This returns <code>{ user: &quot;Alice Durand [en-GB]&quot; }</code> when <code>locale</code> comes from the render context.</p>
+<p><code>from ... import</code> follows the same <code>with</code> rules. Named inputs always take priority over context lookup. The full payload rules are in the next section.</p>
+<h3 id="with-composition-payload" tabindex="-1"><code>with</code>: Composition Payload</h3>
+<p><code>with</code> applies to <code>import</code> and <code>component</code>. It does not apply to <code>extends</code> - the render context flows through an <code>extends</code> chain automatically.</p>
+<p><strong><code>with varName, ...</code></strong> - passes the named local <code>var</code>s by value. Only <code>var</code> declarations can be listed; <code>data</code>, <code>text</code>, and <code>sequence</code> declarations cannot cross a composition boundary.</p>
+<p><strong><code>with { key: expr, ... }</code></strong> - an explicit object literal; keys become named inputs inside the child, values are expressions evaluated in the caller's scope.</p>
+<p><strong><code>with context</code></strong> - makes the render context available to bare-name lookups inside the child. Does not expose parent local variables or channel declarations.</p>
+<p>Forms can be combined. The <code>{ key: value }</code> object form must come last:</p>
+<pre><code class="language-cascada">import &quot;formatters.script&quot; as fmt with context, locale
+import &quot;formatters.script&quot; as fmt with context, { locale: &quot;fr&quot; }
+component &quot;widget.script&quot; as w with context, theme, { size: &quot;lg&quot; }
+</code></pre>
+<p><strong>Resolution order</strong>: explicit <code>with</code> value, then <code>with context</code> lookup, then globals.</p>
+<h3 id="script-inheritance-with-extends-shared-and-method" tabindex="-1">Script Inheritance with <code>extends</code>, <code>shared</code>, and <code>method</code></h3>
+<p>Use inheritance when multiple scripts do mostly the same thing but differ in specific steps. A base script defines the shared logic and declares override points; each child replaces only the parts that differ.</p>
+<p>Three concepts work together:</p>
+<ul>
+<li><strong>Methods</strong> - named override points declared in the base, called with <code>this.method(...)</code>.</li>
+<li><strong>Constructors</strong> - the script body; call <code>super()</code> to run the parent constructor.</li>
+<li><strong>Shared variables</strong> - declared with <code>shared var</code>, <code>shared data</code>, etc.; accessible via <code>this.name</code> from any method or constructor in the chain.</li>
+</ul>
+<h4 id="methods" tabindex="-1">Methods</h4>
+<p>A <code>method</code> is a named, overridable function. Declare it with <code>method ... endmethod</code> and call it with <code>this.methodName(...)</code>. The <code>this.</code> prefix makes it an inherited method call - without it, the call is an ordinary local or context function call.</p>
+<pre><code class="language-cascada">// page.script
+method title()
+  return &quot;Home&quot;
+endmethod
+
+return { title: this.title() }
+</code></pre>
+<pre><code class="language-javascript">await env.renderScript(&quot;page.script&quot;, {})
+// { title: &quot;Home&quot; }
+</code></pre>
+<p>A method can take arguments and return a value, just like a function. Writing <code>this.method</code> without <code>(...)</code> is an error - inherited methods must be called, not read as values.</p>
+<p>Declaring both a shared variable and a method with the same name in the same file is an error.</p>
+<h4 id="overrides" tabindex="-1">Overrides</h4>
+<p>A child script can override a method from the base by declaring one with the same name. When the base calls <code>this.title()</code>, the child's version runs - even though the call site is in the base.</p>
+<pre><code class="language-cascada">// about.script
+extends &quot;page.script&quot;
+
+method title()
+  return &quot;About Us&quot;
+endmethod
+</code></pre>
+<pre><code class="language-javascript">await env.renderScript(&quot;about.script&quot;, {})
+// { title: &quot;About Us&quot; }
+</code></pre>
+<p>The base script is not duplicated. Any logic in the base constructor - fetching data, building the result - runs unchanged with the child's overrides in place.</p>
+<p>An override may have fewer trailing arguments than the parent, but any kept
+argument must use the same name. Callers can pass arguments by keyword (e.g.
+<code>this.card(user=profile)</code>), so renaming a kept position would change the public
+call contract:</p>
+<pre><code class="language-cascada">// base.script
+method card(user, theme)
+  return user.name + &quot; / &quot; + theme
+endmethod
+</code></pre>
+<pre><code class="language-cascada">// child.script
+extends &quot;base.script&quot;
+
+method card(user)
+  return super(user, &quot;dark&quot;)
+endmethod
+</code></pre>
+<p>Declaring <code>card(profile)</code> instead of <code>card(user)</code> would be an error - <code>profile</code>
+is at the same position as the parent's <code>user</code>, which callers refer to by name.</p>
+<h4 id="super-and-super" tabindex="-1"><code>super()</code> and <code>super(...)</code></h4>
+<p>Use <code>super()</code> to call the parent's version of the method and build on its result rather than replacing it entirely.</p>
+<p><code>super()</code> passes no arguments:</p>
+<pre><code class="language-cascada">// about.script
+extends &quot;page.script&quot;
+
+method title()
+  return super() + &quot; - About Us&quot;
+endmethod
+</code></pre>
+<pre><code class="language-javascript">await env.renderScript(&quot;about.script&quot;, {})
+// { title: &quot;Home - About Us&quot; }
+</code></pre>
+<p>Pass arguments explicitly when the parent needs them:</p>
+<pre><code class="language-cascada">method greet(name, formal)
+  return super(&quot;Anonymous&quot;, formal)
+endmethod
+</code></pre>
+<h4 id="constructors" tabindex="-1">Constructors</h4>
+<p>The script body after <code>extends</code> is the constructor for that level of the chain. If the child does work of its own, that work runs first. Call <code>super()</code> at the point where the parent constructor should run.</p>
+<pre><code class="language-cascada">// about.script
+extends &quot;page.script&quot;
+
+method title()
+  return &quot;About Us&quot;
+endmethod
+
+// Child setup - runs first.
+var extra = loadSidebar()
+super()                    // parent constructor runs here
+</code></pre>
+<p>If a child only overrides methods and does no setup of its own, it uses the nearest parent constructor. Once a child does have setup code, parent constructors run only when the child calls <code>super()</code>.</p>
+<p><code>super()</code> returns the parent constructor's return value. Use <code>return super()</code> to forward it as the entry result.</p>
+<h4 id="shared-variables" tabindex="-1">Shared Variables</h4>
+<p>Shared variables belong to the running chain and are accessible via <code>this.name</code> from any constructor or method, regardless of which file the code is in. Declare them with <code>shared var</code>, <code>shared data</code>, <code>shared text</code>, or <code>shared sequence</code>.</p>
+<pre><code class="language-cascada">// page.script
+shared var theme = &quot;light&quot;
+
+method title()
+  return &quot;Home&quot;
+endmethod
+
+return { title: this.title(), theme: this.theme }
+</code></pre>
+<pre><code class="language-cascada">// dark-page.script
+shared var theme = &quot;dark&quot;   // first default in child-to-parent order wins
+
+extends &quot;page.script&quot;
+</code></pre>
+<pre><code class="language-javascript">await env.renderScript(&quot;dark-page.script&quot;, {})
+// { title: &quot;Home&quot;, theme: &quot;dark&quot; }
+</code></pre>
+<p><strong>Every file that uses <code>this.name</code> must declare it</strong> - files compile independently, so the compiler needs the declaration to know what <code>this.name</code> refers to. Re-declaring with a different channel type is an error.</p>
+<p>Shared variables can only be written through <code>this.name</code>. Writing <code>theme = &quot;dark&quot;</code> does not reach the shared variable - it assigns a local instead.</p>
+<p><code>shared</code> declarations must appear before <code>extends</code> and at the top level of the script - they are not allowed inside method or constructor bodies. The full set of declaration forms:</p>
+<table>
+<thead>
+<tr>
+<th>Declaration</th>
+<th>Accessed as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>shared var x = default</code></td>
+<td><code>this.x</code> (read/snapshot), <code>this.x = value</code> (write), <code>this.x.prop</code> (read-through), <code>this.x.prop = value</code> (nested write)</td>
+</tr>
+<tr>
+<td><code>shared var x</code></td>
+<td>same access forms; no default - a parent default may still initialize <code>x</code></td>
+</tr>
+<tr>
+<td><code>shared data x</code></td>
+<td><code>this.x.push(...)</code>, <code>this.x.path = value</code>, etc.</td>
+</tr>
+<tr>
+<td><code>shared text x</code></td>
+<td><code>this.x(&quot;message&quot;)</code></td>
+</tr>
+<tr>
+<td><code>shared sequence db = expr</code></td>
+<td><code>this.db.method(...)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Any shared variable can also be checked for errors: <code>this.x is error</code>, <code>this.x#</code>.</p>
+<p>Plain names do not read shared variables. <code>this.theme</code> reads the shared variable; plain <code>theme</code> looks up the render context, locals, and globals.</p>
+<p>Variables created in the constructor body are local to that constructor. Use shared variables for values that other methods or parent constructors also need.</p>
+<hr>
+<h4 id="context-and-initialization-in-extends" tabindex="-1">Context and initialization in <code>extends</code></h4>
+<p>The render context carries through an <code>extends</code> chain automatically - every constructor and method at every level sees it by bare name. <code>extends</code> takes no <code>with</code> clause.</p>
+<p>To pass initialization values between levels, use shared defaults. The first
+declaration with an initializer in child-to-parent order initializes the shared
+variable. A declaration without an initializer does not block parent defaults;
+use <code>= none</code> when the child must explicitly choose an empty default.</p>
+<pre><code class="language-cascada">// dark-page.script
+shared var theme = &quot;dark&quot;   // child default wins
+
+extends &quot;page.script&quot;
+</code></pre>
+<pre><code class="language-cascada">// page.script
+shared var theme = &quot;light&quot;  // only evaluated if no earlier default exists
+
+method title()
+  return &quot;[&quot; + this.theme + &quot;] Home&quot;
+endmethod
+
+return { title: this.title() }
+</code></pre>
+<p>Defaults are selected before constructors run. Later constructor assignments
+are ordinary writes: they happen wherever the constructor body puts them. A
+child default overrides a parent default, but a child assignment before
+<code>super()</code> can still be overwritten by the parent constructor.</p>
+<h4 id="direct-render-vs-component" tabindex="-1">Direct Render vs. Component</h4>
+<p>An inheritance chain runs in one of two modes:</p>
+<p><strong>Direct render</strong> - render a child script the normal way and get a result back. The chain runs once, the constructors execute, and the result is returned just like any other script.</p>
+<p><strong>Component</strong> - create a named, isolated instance that lives in the current scope. It has its own shared variables and its own constructor run, but does not return a value. You call methods on it and observe its shared variables for as long as you need it. Multiple components of the same script or template coexist without interfering with each other.</p>
+<p>Unlike <code>extends</code>, a component sees only what you explicitly pass - it receives no context by default. Use <code>with</code> to pass input values; add <code>with context</code> to also pass the caller's context. Supported forms:</p>
+<pre><code class="language-cascada">component &quot;X&quot; as ns with { initialTheme: &quot;dark&quot; }
+component &quot;X&quot; as ns with theme, id
+component &quot;X&quot; as ns with context
+component &quot;X&quot; as ns with context, { initialTheme: &quot;dark&quot; }
+component &quot;X&quot; as ns with context, theme, id
+</code></pre>
+<p><code>with context</code> and explicit values can be combined. When a name appears in both places, the explicit value wins. The <code>{ key: value }</code> object form must come last in the clause.</p>
+<pre><code class="language-cascada">// widget.script
+shared var theme = initialTheme or &quot;light&quot;
+
+method render(label)
+  return &quot;[&quot; + this.theme + &quot;] &quot; + label
+endmethod
+</code></pre>
+<pre><code class="language-cascada">// page.script
+component &quot;widget.script&quot; as header with { initialTheme: &quot;dark&quot; }
+component &quot;widget.script&quot; as footer with context   // footer sees the caller's context
+
+var h = header.render(&quot;Header&quot;)
+var f = footer.render(&quot;Footer&quot;)
+return { header: h, footer: f }
+</code></pre>
+<p><code>header</code> and <code>footer</code> are completely independent - separate shared variables, separate methods.</p>
+<p>Observe shared variables from the caller:</p>
+<pre><code class="language-cascada">var snap = header.theme                   // shared var - implicit snapshot
+var len  = header.log.snapshot().length   // shared text/data/sequence - explicit snapshot
+var ok   = header.log is error
+</code></pre>
+<p>Shared variables are read-only from the caller. Names that start with <code>_</code> are private to the component.</p>
+<h4 id="dynamic-extends" tabindex="-1">Dynamic <code>extends</code></h4>
+<p>You can choose the parent at runtime based on context values:</p>
+<pre><code class="language-cascada">extends config.baseScript          // from render context
+extends tier == &quot;pro&quot; if isPro else &quot;standard.script&quot;
+extends baseScript if useBase else none  // no parent if condition is false
+</code></pre>
+<p>Parent selection happens before any setup code runs, so the expression can read render-context values, globals, and - for components - the <code>with</code> payload. It cannot read variables you declare later in the script body, or <code>shared</code> values (those aren't initialized until the constructor runs).</p>
+<p><code>extends</code> must appear before any executable code. <code>shared</code> declarations may appear before it, but they only reserve the shared channel slot - they cannot be read by the <code>extends</code> expression itself.</p>
+<p>When the target is <code>none</code>, <code>null</code>, or evaluates to either of those, the script simply has no parent:</p>
+<pre><code class="language-cascada">extends none   // explicitly parentless - still participates in an inheritance chain
+</code></pre>
+<p>This is useful when a script defines methods or shared variables but is always the root of its chain. All declared methods are still available via <code>this.method(...)</code>.</p>
+<p>Method declarations may appear after <code>extends</code> - they are compiled metadata, not setup code, so placement relative to <code>extends</code> does not affect resolution.</p>
+<h4 id="methods-vs-functions" tabindex="-1">Methods vs. Functions</h4>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>function</code></th>
+<th><code>method</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Call syntax</strong></td>
+<td><code>name(...)</code></td>
+<td><code>this.name(...)</code></td>
+</tr>
+<tr>
+<td><strong>Overridable</strong></td>
+<td>No</td>
+<td>Yes - child replaces parent</td>
+</tr>
+<tr>
+<td><strong><code>super()</code></strong></td>
+<td>Not available</td>
+<td>Available</td>
+</tr>
+<tr>
+<td><strong>Shared variable access</strong></td>
+<td>Isolated</td>
+<td>Accessible via <code>this.name</code></td>
+</tr>
+<tr>
+<td><strong>Use case</strong></td>
+<td>Reusable utility logic</td>
+<td>Override point for child scripts</td>
+</tr>
+</tbody>
+</table>
+<h4 id="comparison-to-class-inheritance" tabindex="-1">Comparison to Class Inheritance</h4>
+<table>
+<thead>
+<tr>
+<th>OOP concept</th>
+<th>Cascada equivalent</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>class Child extends Base</code></td>
+<td><code>extends &quot;base.script&quot;</code></td>
+<td>File-level, not type-level</td>
+</tr>
+<tr>
+<td>Constructor</td>
+<td>Script body after <code>extends</code></td>
+<td>No setup code - uses nearest parent constructor; no implicit <code>super()</code></td>
+</tr>
+<tr>
+<td>Constructor parameters</td>
+<td>shared variables + render context</td>
+<td>Context flows through automatically; use <code>shared var</code> to pass computed values between levels</td>
+</tr>
+<tr>
+<td>Instance state (<code>this.x</code>)</td>
+<td><code>shared var x</code>, <code>shared data x</code>, etc.</td>
+<td>Each file must declare the shared names it uses</td>
+</tr>
+<tr>
+<td>Virtual method</td>
+<td><code>method</code></td>
+<td>Called via <code>this.method(...)</code></td>
+</tr>
+<tr>
+<td><code>super.method(args)</code></td>
+<td><code>super(args)</code></td>
+<td>Pass parent arguments explicitly</td>
+</tr>
+<tr>
+<td>Single render</td>
+<td><code>extends</code> direct render</td>
+<td>One chain instance per render</td>
+</tr>
+<tr>
+<td>Multiple instances</td>
+<td><code>component &quot;X&quot; as ns</code></td>
+<td>Each instance is fully independent</td>
+</tr>
+<tr>
+<td>Multiple inheritance</td>
+<td>Not supported</td>
+<td>One parent per <code>extends</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="loaders-and-file-resolution" tabindex="-1">Loaders and File Resolution</h3>
+<p>When you write:</p>
+<pre><code class="language-cascada">import &quot;utils.script&quot; as utils
+extends &quot;base.script&quot;
+</code></pre>
+<p>the environment resolves those file names through its configured loader or loaders.</p>
+<p>Loaders define:</p>
+<ul>
+<li>where scripts are loaded from, such as the filesystem, a web server, a database, or a precompiled bundle</li>
+<li>how relative paths are resolved</li>
+<li>which source wins when multiple loaders are configured</li>
+</ul>
+<p>In practice:</p>
+<ul>
+<li><code>FileSystemLoader</code> loads scripts from disk</li>
+<li><code>WebLoader</code> loads scripts over HTTP in browser environments</li>
+<li><code>PrecompiledLoader</code> loads templates or scripts that were precompiled ahead of time</li>
+</ul>
+<p>You can pass one loader or several loaders to <code>AsyncEnvironment</code>. If multiple loaders are configured, Cascada tries them in order until one finds the requested script.</p>
+<p>The detailed loader API is documented in <a href="#api-reference">API Reference</a>.</p>
+<h2 id="api-reference" tabindex="-1">API Reference</h2>
+<p>Cascada builds upon the robust Nunjucks API, extending it with a powerful new execution model for scripts. This reference focuses on the APIs specific to CascadaScript.</p>
+<p>For details on features inherited from Nunjucks, such as the full range of built-in filters and advanced loader options, please consult the official <a href="https://mozilla.github.io/nunjucks/api.html">Nunjucks API documentation</a>.</p>
+<h3 id="key-distinction-script-vs-template" tabindex="-1">Key Distinction: Script vs. Template</h3>
+<ul>
+<li><strong>Script</strong>: A file or string designed for <strong>logic and data orchestration</strong>. Scripts use features like <code>var</code>, <code>for</code>, <code>if</code>, channel declarations (<code>data</code>, <code>text</code>), sequence declarations (<code>sequence</code>), and explicit <code>return</code> to execute asynchronous operations and produce a structured result. Their primary goal is to <em>build data</em>.</li>
+<li><strong>Template</strong>: A file or string designed for <strong>presentation and text generation</strong>. Templates use <code>{{ variable }}</code> and <code>{% tag %}</code> syntax to render a final string output. Their primary goal is to <em>render text</em>.</li>
+</ul>
+<p>Use ESM imports for new code. The main entry can compile from source:</p>
+<pre><code class="language-javascript">import {
+  AsyncEnvironment,
+  FileSystemLoader,
+  precompileScript,
+  precompileTemplateAsync
+} from 'cascada-engine';
+</code></pre>
+<p>Use the precompiled entry when templates or scripts are compiled ahead of time and the app only needs the runtime. This entry does not import the compiler, parser, lexer, or precompile API:</p>
+<pre><code class="language-javascript">import { AsyncEnvironment, PrecompiledLoader } from 'cascada-engine/precompiled';
+</code></pre>
+<h3 id="asyncenvironment-class" tabindex="-1">AsyncEnvironment Class</h3>
+<p>The <code>AsyncEnvironment</code> is the primary class for orchestrating and executing CascadaScripts. All its rendering methods return Promises.</p>
+<h4 id="execution" tabindex="-1">Execution</h4>
+<ul>
+<li>
+<p><code>asyncEnvironment.renderScript(scriptName, [context])</code>
+Loads and executes a script from a file using the configured loader.</p>
+<pre><code class="language-javascript">const userData = await env.renderScript('getUser.casc', { userId: 123 });
+</code></pre>
+</li>
+<li>
+<p><code>asyncEnvironment.renderScriptString(source, [context])</code>
+Executes a script from a raw string.</p>
+<pre><code class="language-javascript">const script = `
+  var user = { name: &quot;Alice&quot; }
+  return user
+`;
+const result = await env.renderScriptString(script);
+// { name: &quot;Alice&quot; }
+</code></pre>
+</li>
+<li>
+<p><code>asyncEnvironment.renderTemplate(templateName, [context])</code></p>
+</li>
+<li>
+<p><code>asyncEnvironment.renderTemplateString(templateSource, [context])</code>
+Renders a traditional Nunjucks template to a string.</p>
+</li>
+</ul>
+<h4 id="configuration" tabindex="-1">Configuration</h4>
+<ul>
+<li>
+<p><code>new AsyncEnvironment([loaders], [opts])</code>
+Creates a new environment.</p>
+<ul>
+<li><code>loaders</code>: A single loader or an array of loaders to find script/template files.</li>
+<li><code>opts</code>: Configuration flags:
+<ul>
+<li><code>autoescape</code> (default: <code>true</code>): Automatically escapes template output.</li>
+<li><code>throwOnUndefined</code> (default: <code>false</code>): Throw when rendering an undefined value.</li>
+<li><code>loadFailFatal</code> (default: <code>true</code>): How a missing or failed <code>import</code> / <code>from import</code> / <code>component</code> / <code>include</code> is handled. <code>true</code> - fatal (Nunjucks-compatible). <code>false</code> - non-fatal: <code>import</code> / <code>component</code> become <a href="#the-kind-property"><code>LoadFailed</code></a> poison (an Error Value of that kind), <code>include</code> renders empty. An array such as <code>['import']</code> makes only the listed kinds fatal. The root render and <code>extends</code> are always fatal.</li>
+<li><code>trimBlocks</code> (default: <code>false</code>): Remove the first newline after a block tag.</li>
+<li><code>lstripBlocks</code> (default: <code>false</code>): Strip leading whitespace from a block tag.</li>
+<li><code>tags</code>: Override template tag delimiters.</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-javascript">import { AsyncEnvironment, FileSystemLoader } from 'cascada-engine';
+
+const env = new AsyncEnvironment(new FileSystemLoader('scripts'), {
+  trimBlocks: true
+});
+</code></pre>
+</li>
+</ul>
+<p><strong>Loaders</strong>
+Loaders are objects that tell the environment how to find and load your scripts and templates from a source, such as the filesystem, a database, or a network.</p>
+<ul>
+<li>
+<p><strong>Built-in Loaders:</strong></p>
+<ul>
+<li><strong><code>FileSystemLoader</code></strong>: (Node.js only) Loads files from the local filesystem.</li>
+<li><strong><code>NodeResolveLoader</code></strong>: (Node.js only) Resolves templates through Node package resolution.</li>
+<li><strong><code>WebLoader</code></strong>: (Browser only) Loads files over HTTP.</li>
+<li><strong><code>PrecompiledLoader</code></strong>: Loads assets from a precompiled JavaScript object.
+You can pass a single loader or an array of loaders to the <code>AsyncEnvironment</code> constructor. If an array is provided, Cascada will try each loader in order until one successfully finds the requested file.</li>
+</ul>
+<pre><code class="language-javascript">const env = new AsyncEnvironment([
+  new FileSystemLoader('scripts'),
+  new PrecompiledLoader(precompiledData)
+]);
+</code></pre>
+</li>
+<li>
+<p><strong>Custom Loaders:</strong> Create a custom loader by providing a function or class. Return <code>null</code> to allow fallback to the next loader.</p>
+<p><strong>Loader Function:</strong></p>
+<pre><code class="language-javascript">const networkLoader = async (name) =&gt; {
+  const response = await fetch(`https://my-cdn.com/scripts/${name}`);
+  if (!response.ok) return null;
+  const src = await response.text();
+  return { src, path: name, noCache: false };
+};
+</code></pre>
+<p><strong>Loader Class:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+<th style="text-align:center">Required?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>load(name)</code></td>
+<td>Loads an asset by name. Returns string, <code>LoaderSource</code>, or <code>null</code>.</td>
+<td style="text-align:center"><strong>Yes</strong></td>
+</tr>
+<tr>
+<td><code>isRelative(name)</code></td>
+<td>Returns <code>true</code> if a filename is relative.</td>
+<td style="text-align:center">No</td>
+</tr>
+<tr>
+<td><code>resolve(from, to)</code></td>
+<td>Resolves a relative path.</td>
+<td style="text-align:center">No</td>
+</tr>
+<tr>
+<td><code>on(event, handler)</code></td>
+<td>Listens for environment events.</td>
+<td style="text-align:center">No</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-javascript">class DatabaseLoader {
+  constructor(db) { this.db = db; }
+
+  async load(name) {
+    const record = await this.db.scripts.findByName(name);
+    if (!record) return null;
+    return { src: record.sourceCode, path: name, noCache: false };
+  }
+
+  isRelative(filename) {
+    return filename.startsWith('./') || filename.startsWith('../');
+  }
+
+  resolve(from, to) {
+    const fromDir = from.substring(0, from.lastIndexOf('/'));
+    return `${fromDir}/${to}`;
+  }
+}
+</code></pre>
+<p><strong>Running Loaders Concurrently:</strong>
+The <code>raceLoaders(loaders)</code> function creates a single loader that runs multiple loaders concurrently and returns the result from the first one that succeeds. Relative dependencies of compiled sources resolve and load exclusively through the member that supplied the declaring source. String parent names passed directly to environment loading methods have no owner: each member resolves against that string and races independently. If every member returns <code>null</code>, the environment continues to its next loader; loader failures remain errors when no member succeeds.</p>
+<p>Loaders default to <code>cachePolicy: 'cache'</code>, caching hits and misses and sharing pending requests. Emit <code>update</code> or call <code>env.invalidateCache()</code> after adding or changing resources. Dynamic loaders can set <code>cachePolicy: 'reload'</code> to bypass all caching and keep requests independent. A source's <code>noCache: true</code> prevents retention after completion; it does not disable pending-request sharing. A race uses <code>'reload'</code> when any member does.</p>
+<pre><code class="language-javascript">import { raceLoaders, FileSystemLoader, WebLoader } from 'cascada-engine';
+
+const fastLoader = raceLoaders([
+  new WebLoader('https://my-cdn.com/scripts/'),
+  new FileSystemLoader('scripts/backup/')
+]);
+
+const env = new AsyncEnvironment(fastLoader);
+</code></pre>
+</li>
+</ul>
+<h4 id="compilation-and-caching" tabindex="-1">Compilation and Caching</h4>
+<ul>
+<li>
+<p><code>asyncEnvironment.loadString(name, parentName?)</code>
+Loads literal text without interpreting template syntax. Empty sources return <code>''</code>. Text, templates, and scripts share the environment's loader chain and source cache, respecting <code>noCache</code> and loader update events.</p>
+</li>
+<li>
+<p><code>asyncEnvironment.invalidateCache()</code>
+Clears this environment's source and compiled caches.</p>
+</li>
+<li>
+<p><code>asyncEnvironment.getScript(scriptName)</code>
+Retrieves a compiled <code>Script</code> object, loading and caching it if not already cached.</p>
+</li>
+<li>
+<p><code>asyncEnvironment.getTemplate(templateName)</code>
+Retrieves a compiled <code>AsyncTemplate</code> object.</p>
+<pre><code class="language-javascript">const compiledScript = await env.getScript('process_data.casc');
+
+const result1 = await compiledScript.render({ input: 'data1' });
+const result2 = await compiledScript.render({ input: 'data2' });
+</code></pre>
+</li>
+</ul>
+<h4 id="adding-global-methods" tabindex="-1">Adding Global Methods</h4>
+<ul>
+<li>
+<p><code>asyncEnvironment.addGlobal(name, value)</code>
+Adds a global function or object with methods accessible in all scripts and templates.</p>
+<pre><code class="language-javascript">env.addGlobal('utils', {
+  formatDate: (d) =&gt; d.toISOString(),
+  API_VERSION: 'v3'
+});
+// In script: var formatted = utils.formatDate(now())
+</code></pre>
+</li>
+<li>
+<p><code>asyncEnvironment.addFilter(name, func, [isAsync])</code>
+Adds a custom filter for use with the <code>|</code> operator.</p>
+</li>
+<li>
+<p><code>asyncEnvironment.addFilterAsync(name, func)</code>
+Adds an async filter.</p>
+</li>
+<li>
+<p><code>asyncEnvironment.addDataMethods(methods)</code>
+Extends the built-in <code>data</code> channel with custom methods.</p>
+<pre><code class="language-javascript">env.addDataMethods({
+  incrementBy: (target, amount) =&gt; (target || 0) + amount,
+});
+// In script: name.path.incrementBy(10)
+</code></pre>
+</li>
+</ul>
+<h3 id="compiled-objects-script" tabindex="-1">Compiled Objects: <code>Script</code></h3>
+<p>When you compile an asset, you get a reusable object that can be rendered efficiently multiple times.</p>
+<h4 id="script" tabindex="-1"><code>Script</code></h4>
+<p>Represents a compiled CascadaScript.</p>
+<ul>
+<li><code>asyncScript.render([context])</code>
+Executes the compiled script with the given <code>context</code>, returning a <code>Promise</code> that resolves with the result.</li>
+</ul>
+<h4 id="asynctemplate" tabindex="-1"><code>AsyncTemplate</code></h4>
+<p>Represents a compiled Nunjucks Template.</p>
+<ul>
+<li><code>asyncTemplate.render([context])</code>
+Renders the compiled template, returning a <code>Promise</code> that resolves with the final string.</li>
+</ul>
+<h3 id="precompiling-for-production" tabindex="-1">Precompiling for Production</h3>
+<p>For maximum performance, precompile your scripts and templates into JavaScript ahead of time:</p>
+<ul>
+<li><code>precompileScript(path, [opts])</code></li>
+<li><code>precompileTemplate(path, [opts])</code></li>
+<li><code>precompileTemplateAsync(path, [opts])</code></li>
+<li><code>precompileScriptString(source, [opts])</code></li>
+<li><code>precompileTemplateString(source, [opts])</code></li>
+<li><code>precompileTemplateStringAsync(source, [opts])</code></li>
+</ul>
+<p>The resulting JavaScript can be saved to a <code>.js</code> file and loaded using the <code>PrecompiledLoader</code>. A key option is <code>opts.env</code>, which ensures custom filters, global functions, and data methods are included in the compiled output.</p>
+<p>For compiler-free precompiled rendering, import the precompiled entry. It loads only the runtime and precompiled loader, not the compiler:</p>
+<pre><code class="language-javascript">import { AsyncEnvironment, PrecompiledLoader } from 'cascada-engine/precompiled';
+</code></pre>
+<p>Use <code>renderTemplate(...)</code> for precompiled templates and <code>renderScript(...)</code> for precompiled scripts.</p>
+<p>The CLI uses the same modes:</p>
+<pre><code class="language-bash">cascada-precompile views --mode template
+cascada-precompile views --mode template-async
+cascada-precompile script.casc --mode script --format esm
+</code></pre>
+<p><strong>For a comprehensive guide on precompilation options, see the <a href="https://mozilla.github.io/nunjucks/api.html#precompiling">Nunjucks precompiling documentation</a>.</strong></p>
+<h2 id="development-status-and-roadmap" tabindex="-1">Development Status and Roadmap</h2>
+<h3 id="differences-from-classic-nunjucks" tabindex="-1">Differences from classic Nunjucks</h3>
+<ul>
+<li><strong>Block-local scoping:</strong> <code>if</code>, <code>for</code>/<code>each</code>/<code>while</code>, and <code>switch</code> branches run in their own scope. <code>var</code> declarations inside them stay local unless you intentionally write to an outer variable. This avoids race conditions and keeps loops concurrent.</li>
+</ul>
+<h3 id="roadmap" tabindex="-1">Roadmap</h3>
+<p>This roadmap outlines key features and enhancements that are planned or currently in progress.</p>
+<ul>
+<li>
+<p><strong>Streaming support</strong> - see <a href="https://github.com/geleto/cascada/blob/df4d5c2ac2e9b11ad22a5afa8c43c9b60f293f87/docs/cascada/streaming.md">streaming.md</a></p>
+</li>
+<li>
+<p><strong>Expanded Sequential Execution (<code>!</code>) Support</strong>
+Enhancing the <code>!</code> marker to work on variables and not just objects from the global context.</p>
+</li>
+<li>
+<p><strong>Function parameters by reference</strong>
+Allowing functions that accept arguments by reference such as <code>function myFunction(var state, sequence seq, db!)</code>, where caller <code>var</code> and <code>sequence</code> arguments can be modified from inside the function, and sequential-path arguments (db) can be used in <code>!</code> execution paths.</p>
+</li>
+<li>
+<p><strong>Compound Assignment for Variables (<code>+=</code>, <code>-=</code>, etc.)</strong>
+Extending support for compound assignment operators to regular variables (currently only supported for data channels).</p>
+</li>
+<li>
+<p><strong>Enhanced Error Reporting</strong>
+Improving the debugging experience with detailed syntax and runtime error messages.</p>
+</li>
+<li>
+<p><strong>Execution Replay and Debugging</strong>
+A dedicated logging system to capture the entire execution trace.</p>
+</li>
+<li>
+<p><strong>OpenTelemetry Integration for Observability</strong>
+Native support for tracing using the OpenTelemetry standard.</p>
+</li>
+<li>
+<p><strong>Robustness and Concurrency Validation</strong>
+Extensive testing and validation for concurrency, poisoning, and recovery behavior.</p>
+</li>
+</ul>

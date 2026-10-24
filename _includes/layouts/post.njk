@@ -1,0 +1,17 @@
+---
+layout: layouts/base.njk
+---
+<article class="container reading-column">
+  <header class="article-header">
+    <a class="section-link" href="/blog/">← Cascada Blog</a>
+    <h1>{{ title | escape }}</h1>
+    <p class="article-meta"><time datetime="{{ page.date | isoDate }}">{{ page.date | readableDate }}</time><span aria-hidden="true"> · </span>{{ site.author }}<span aria-hidden="true"> · </span>{{ content | readingTime }} min read</p>
+  </header>
+  <div class="prose">
+{{ content | safe }}
+  </div>
+  <footer class="article-footer">
+    <p class="article-topics"><span class="visually-hidden">Topics: </span>{% for tag in tags %}{% if tag != "posts" %}<span>{{ tag }}</span>{% endif %}{% endfor %}</p>
+    <a class="section-link" href="/blog/">← All posts</a>
+  </footer>
+</article>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#b44742">
+  <meta name="description" content="{{ (description or site.description) | escape }}">
+  <title>{{ title | escape }}{% if not home %} | {{ site.name }}{% endif %}</title>
+  <link rel="canonical" href="{{ page.url | absoluteUrl(site.url) }}">
+  <link rel="alternate" type="application/atom+xml" href="/feed.xml" title="Cascada Blog">
+  <meta property="og:title" content="{{ title | escape }}">
+  <meta property="og:description" content="{{ (description or site.description) | escape }}">
+  <meta property="og:site_name" content="{{ site.name }}">
+  <meta property="og:type" content="{% if isPost %}article{% else %}website{% endif %}">
+  <meta property="og:url" content="{{ page.url | absoluteUrl(site.url) }}">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
+  <link rel="stylesheet" href="/styles.css">
+  {% if not home %}<link rel="stylesheet" href="/content.css">{% endif %}
+  {% if documentation %}<link rel="stylesheet" href="/docs.css">{% endif %}
+  <script src="/main.js" defer></script>
+</head>
+<body id="top">
+  <a class="skip-link" href="#main">Skip to content</a>
+{% include "header.njk" %}
+  <main id="main"{% if not home %} class="content-main{% if documentation %} docs-main{% endif %}"{% endif %}>
+{{ content | safe }}
+  </main>
+{% include "footer.njk" %}
+  <p id="copy-status" class="visually-hidden" role="status" aria-live="polite"></p>
+</body>
+</html>

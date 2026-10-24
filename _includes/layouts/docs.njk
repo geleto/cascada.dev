@@ -1,0 +1,21 @@
+---
+layout: layouts/base.njk
+---
+<div class="container docs-layout">
+  <aside class="docs-sidebar" aria-label="{{ title | escape }} index">
+    <details class="docs-index" open>
+      <summary>On this page</summary>
+      <nav aria-label="Documentation sections">
+{% documentation documentationIndex %}
+      </nav>
+    </details>
+  </aside>
+  <article class="docs-article">
+    <header class="article-header">
+      <h1 id="{{ titleId | escape }}">{{ title | escape }}</h1>
+    </header>
+    <div class="prose">
+{{ content | safe }}
+    </div>
+  </article>
+</div>

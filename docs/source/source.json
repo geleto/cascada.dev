@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/geleto/cascada",
+  "hashFormat": "sha256 with LF line endings",
+  "commit": "df4d5c2ac2e9b11ad22a5afa8c43c9b60f293f87",
+  "modified": false,
+  "files": {
+    "script.md": "f2444ddc6e6e17e846f72a349c6b8cdedaee691b92740b185a345145dad87b32",
+    "template.md": "c17b1d7ca2e83e7cb840b9759f6c7036614c87268692bbd3832a211c134a8b7a"
+  },
+  "textNormalization": "em dashes replaced with hyphens"
+}

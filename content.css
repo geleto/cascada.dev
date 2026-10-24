@@ -1,0 +1,51 @@
+/* Content pages share the homepage's palette, type, header, and footer. */
+.content-main { min-height: calc(100vh - 220px); padding-block: 64px 88px; }
+.reading-column { max-width: 800px; }
+.article-header { margin-bottom: 44px; }
+.article-header h1 { margin-block: 20px 22px; font-size: clamp(34px, 5vw, 52px); line-height: 1.12; letter-spacing: -.04em; text-wrap: balance; }
+.section-link, .read-post { color: var(--blue); font-size: 15px; font-weight: 650; text-decoration: none; }
+.section-link:hover, .read-post:hover { text-decoration: underline; }
+.article-meta { color: var(--muted); font-size: 14px; line-height: 1.7; }
+.article-meta span { padding-inline: .3em; }
+.content-intro { color: var(--muted); font-size: 21px; line-height: 1.55; }
+.blog-header h1 { margin-top: 0; font-size: clamp(48px, 6vw, 64px); }
+.post-list { list-style: none; margin: 0; padding: 0; }
+.post-summary { padding-block: 34px 38px; border-top: 1px solid var(--line); }
+.post-summary .article-meta { margin-bottom: 12px; }
+.post-summary h2 { margin-bottom: 16px; font-size: clamp(25px, 3.3vw, 32px); line-height: 1.2; text-wrap: initial; }
+.post-summary h2 a { text-decoration: none; }
+.post-summary h2 a:hover { color: var(--blue); text-decoration: underline; }
+.post-summary > p:not(.article-meta) { color: var(--muted); font-size: 18px; line-height: 1.65; }
+.prose { display: flow-root; color: var(--ink); font-size: 18px; line-height: 1.75; overflow-wrap: anywhere; }
+.prose > :first-child { margin-top: 0; }
+.prose p { margin-bottom: 1.25em; }
+.prose h2, .prose h3, .prose h4 { clear: both; color: var(--ink); margin-block: 1.7em .7em; line-height: 1.25; letter-spacing: -.025em; text-wrap: initial; }
+.prose h2 { font-size: clamp(25px, 3.3vw, 32px); }
+.prose h3 { font-size: 24px; }
+.prose h4 { font-size: 20px; }
+.prose a { color: var(--blue); }
+.prose ul, .prose ol { padding-left: 1.5em; margin-block: 0 1.4em; }
+.prose li { margin-block: .4em; padding-left: .15em; }
+.prose li > p { margin-bottom: .7em; }
+.prose blockquote { margin: 1.5em 0; padding: 18px 24px; border-left: 4px solid var(--blue); background: var(--light); color: var(--muted); }
+.prose blockquote > :last-child { margin-bottom: 0; }
+.prose hr { clear: both; height: 0; border: 0; border-top: 1px solid var(--line); margin-block: 36px; }
+.prose img { display: block; max-width: 100%; height: auto; border-radius: 6px; }
+.prose p > img:only-child { margin-block: 30px; }
+.prose figure { margin-block: 30px; }
+.prose figcaption { margin-top: 10px; font-size: 14px; color: var(--muted); }
+.prose :not(pre) > code { color: #873b37; background: #eee8e5; border-radius: 3px; padding: .12em .25em; font-size: .85em; }
+.prose pre { clear: both; margin-block: 24px; border: 1px solid var(--line); border-radius: 6px; background: #f2f4f2; font-size: 14px; line-height: 1.8; overflow-wrap: normal; }
+.prose table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin-block: 24px; font-size: 16px; }
+.prose th, .prose td { padding: 12px 16px; border: 1px solid var(--line); text-align: left; }
+.prose th { background: var(--light); font-weight: 650; }
+.article-footer { clear: both; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line); }
+.article-topics { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 13px; }
+@media (max-width: 620px) {
+  .content-main { padding-block: 36px 52px; }
+  .article-header { margin-bottom: 32px; }
+  .prose { font-size: 17px; line-height: 1.7; }
+  .prose pre { font-size: 12px; }
+  .prose img[style*="float"] { float: none !important; margin: 24px auto !important; }
+  .post-summary { padding-block: 28px; }
+}

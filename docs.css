@@ -1,0 +1,40 @@
+/* Compact documentation; typography, code rendering, and colours are shared. */
+.docs-main { padding-block: 28px 52px; }
+.docs-layout { max-width: 1380px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 40px; }
+.docs-article { min-width: 0; }
+.docs-main > .reading-column { max-width: 960px; }
+.docs-main .article-header { margin-bottom: 24px; }
+.docs-main .article-header h1 { margin-block: 0 16px; font-size: clamp(28px, 3.2vw, 38px); letter-spacing: -.03em; }
+.docs-main .prose { font-size: 16px; line-height: 1.6; }
+.docs-main .prose p { margin-block: 0 .85em; }
+.docs-main .prose h2, .docs-main .prose h3, .docs-main .prose h4 { margin-block: 1.5em .55em; scroll-margin-top: 24px; }
+.docs-main .prose h2 { font-size: 25px; padding-bottom: .25em; border-bottom: 1px solid var(--line); }
+.docs-main .prose h3 { font-size: 21px; }
+.docs-main .prose h4 { font-size: 18px; }
+.docs-main .prose ul, .docs-main .prose ol { margin-bottom: 1em; }
+.docs-main .prose li { margin-block: .2em; }
+.docs-main .prose li > p { margin-bottom: .4em; }
+.docs-main .prose pre { margin-block: 16px; padding: 16px 18px; font-size: 13px; line-height: 1.6; }
+.docs-main .prose blockquote { margin-block: 16px; padding: 12px 18px; }
+.docs-main .prose table { margin-block: 16px; font-size: 14px; }
+.docs-main .prose th, .docs-main .prose td { padding: 8px 12px; }
+.docs-main .prose hr { margin-block: 24px; }
+.docs-sidebar { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-right: 1px solid var(--line); padding-right: 20px; }
+.docs-index summary { cursor: pointer; font-size: 14px; font-weight: 700; padding-block: 4px 12px; color: var(--ink); }
+.docs-index ul { list-style: none; margin: 0; padding: 0; }
+.docs-index ul ul { margin-block: 3px 10px; padding-left: 12px; border-left: 1px solid var(--line); }
+.docs-index a { display: block; padding: 4px 8px; font-size: 13px; line-height: 1.4; color: var(--muted); text-decoration: none; overflow-wrap: anywhere; }
+.docs-index nav > ul > li > a { color: var(--ink); font-weight: 650; }
+.docs-index a:hover, .docs-index a:focus-visible { color: var(--blue); text-decoration: underline; }
+.docs-index a[aria-current="location"] { color: var(--blue); background: var(--light); box-shadow: inset 3px 0 var(--blue); font-weight: 650; }
+@media (max-width: 900px) {
+  .docs-layout { grid-template-columns: 220px minmax(0, 1fr); gap: 24px; }
+}
+@media (max-width: 760px) {
+  .docs-main { padding-top: 24px; }
+  .docs-layout { display: block; }
+  .docs-sidebar { position: static; max-height: none; overflow: visible; border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; margin-bottom: 24px; background: var(--light); }
+  .docs-index summary { padding-block: 2px; }
+  .docs-index nav { max-height: 55vh; overflow-y: auto; margin-top: 12px; }
+  .docs-main .prose pre { font-size: 12px; padding: 14px; }
+}

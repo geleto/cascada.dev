@@ -81,9 +81,9 @@ endif
 ## Sequential by exception.
 Concurrency is the default, but sometimes order matters.
 
-- **`db!.write(data)`** — Add `!` to calls that modify external state, such as database writes, to run them in order.
-- **`each item in items`** — Process loop iterations one by one.
-- **`for item in items of 5`** — Limit a loop to five concurrent iterations.
+- **`db!.write(data)`** - Add `!` to calls that modify external state, such as database writes, to run them in order.
+- **`each item in items`** - Process loop iterations one by one.
+- **`for item in items of 5`** - Limit a loop to five concurrent iterations.
 
 
 (On the right)
@@ -127,7 +127,7 @@ const result = await env.renderScriptString(`
 ## Templates that run concurrently.
 **Cascada Template** brings the same engine to templates, using the popular Nunjucks syntax. Create AI prompts, HTML, emails, and more using familiar expressions, macros, conditionals, and loops.
 
-Just like CascadaScript, **everything that can run concurrently, does** — even inside templates. Independent operations run in parallel, while the final output is assembled in the order you wrote it.
+Just like CascadaScript, **everything that can run concurrently, does** - even inside templates. Independent operations run in parallel, while the final output is assembled in the order you wrote it.
 
 ```njk
 Write a research brief on {{ topic }}:

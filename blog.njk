@@ -1,0 +1,23 @@
+---
+layout: layouts/base.njk
+title: Blog
+description: Ideas, tutorials, and architecture behind Cascada and concurrent programming.
+permalink: /blog/
+---
+<div class="container reading-column">
+  <header class="article-header blog-header">
+    <h1>Blog</h1>
+    <p class="content-intro">Ideas, tutorials, and architecture behind Cascada.</p>
+    <a class="section-link" href="/feed.xml">Subscribe via RSS <span aria-hidden="true">↗</span></a>
+  </header>
+  <ol class="post-list" reversed>
+    {% for post in collections.posts | reverse %}
+    <li class="post-summary">
+      <p class="article-meta"><time datetime="{{ post.date | isoDate }}">{{ post.date | readableDate }}</time><span aria-hidden="true"> · </span>{{ post.content | readingTime }} min read</p>
+      <h2><a href="{{ post.url }}">{{ post.data.title | escape }}</a></h2>
+      <p>{{ post.content | excerpt | safe }}</p>
+      <a class="read-post" href="{{ post.url }}" aria-label="Read {{ post.data.title | escape }}">Read more <span aria-hidden="true">→</span></a>
+    </li>
+    {% endfor %}
+  </ol>
+</div>

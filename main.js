@@ -1,7 +1,7 @@
 // Small progressive enhancements; all page content is available without JavaScript.
 const menuToggle = document.querySelector('.menu-toggle');
 const navigation = document.querySelector('#primary-nav');
-const smallScreen = window.matchMedia('(max-width: 620px)');
+const smallScreen = window.matchMedia('(max-width: 960px)');
 
 function closeMenu() {
   menuToggle.setAttribute('aria-expanded', 'false');
@@ -22,6 +22,69 @@ navigation.addEventListener('keydown', (event) => {
     menuToggle.focus();
   }
 });
+
+// Native details keeps the static docs index usable without JavaScript too.
+const docsIndex = document.querySelector('.docs-index');
+if (docsIndex) {
+  const compactDocs = window.matchMedia('(max-width: 760px)');
+  const resizeIndex = () => { docsIndex.open = !compactDocs.matches; };
+  resizeIndex();
+  compactDocs.addEventListener('change', resizeIndex);
+  docsIndex.addEventListener('click', (event) => {
+    if (compactDocs.matches && event.target.closest('a')) docsIndex.open = false;
+  });
+
+  const sections = [...docsIndex.querySelectorAll('nav a[href^="#"]')]
+    .map((link) => ({ link, heading: document.getElementById(decodeURIComponent(link.hash.slice(1))) }))
+    .filter(({ heading }) => heading);
+  let activeLink;
+  let updateQueued = false;
+  let revealCurrent = false;
+
+  function updateIndex() {
+    updateQueued = false;
+    let current = sections[0];
+    for (const section of sections) {
+      if (section.heading.getBoundingClientRect().top <= 64) current = section;
+      else break;
+    }
+    // A short final section may never reach the top of the viewport.
+    if (window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+      current = sections[sections.length - 1];
+    }
+    if (!current) return;
+
+    const changed = activeLink !== current.link;
+    if (changed) {
+      activeLink?.removeAttribute('aria-current');
+      activeLink = current.link;
+      activeLink.setAttribute('aria-current', 'location');
+    }
+    if (docsIndex.open && (changed || revealCurrent)) {
+      const scroller = compactDocs.matches ? docsIndex.querySelector('nav') : docsIndex.closest('.docs-sidebar');
+      const bounds = scroller.getBoundingClientRect();
+      const item = activeLink.getBoundingClientRect();
+      // Scroll only the index pane, never the document or the keyboard focus.
+      if (item.top < bounds.top + 8) scroller.scrollTop += item.top - bounds.top - 8;
+      else if (item.bottom > bounds.bottom - 8) scroller.scrollTop += item.bottom - bounds.bottom + 8;
+    }
+    revealCurrent = false;
+  }
+
+  function queueIndexUpdate(reveal = false) {
+    revealCurrent ||= reveal;
+    if (updateQueued) return;
+    updateQueued = true;
+    requestAnimationFrame(updateIndex);
+  }
+
+  window.addEventListener('scroll', () => queueIndexUpdate(), { passive: true });
+  window.addEventListener('hashchange', () => queueIndexUpdate(true));
+  window.addEventListener('resize', () => queueIndexUpdate(true));
+  window.addEventListener('load', () => queueIndexUpdate(true));
+  docsIndex.addEventListener('toggle', () => queueIndexUpdate(true));
+  queueIndexUpdate(true);
+}
 
 // Reuse the original example so all views always show exactly the same code.
 document.querySelectorAll('[data-code-source]').forEach((code) => {

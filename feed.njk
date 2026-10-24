@@ -1,0 +1,25 @@
+---
+layout: false
+permalink: /feed.xml
+eleventyExcludeFromCollections: true
+---
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Cascada Blog</title>
+  <subtitle>{{ site.description | escape }}</subtitle>
+  <link href="{{ '/feed.xml' | absoluteUrl(site.url) }}" rel="self"/>
+  <link href="{{ '/blog/' | absoluteUrl(site.url) }}"/>
+  <id>{{ '/blog/' | absoluteUrl(site.url) }}</id>
+  <updated>{{ collections.posts | getNewestCollectionItemDate | dateToRfc3339 }}</updated>
+  <author><name>{{ site.author | escape }}</name></author>
+  {% for post in collections.posts | reverse %}
+  <entry>
+    <title>{{ post.data.title | escape }}</title>
+    <link href="{{ post.url | absoluteUrl(site.url) }}"/>
+    <id>{{ post.url | absoluteUrl(site.url) }}</id>
+    <updated>{{ post.date | dateToRfc3339 }}</updated>
+    <summary>{{ post.data.description | escape }}</summary>
+    <content type="html">{{ post.content | htmlToAbsoluteUrls(post.url | absoluteUrl(site.url)) | escape }}</content>
+  </entry>
+  {% endfor %}
+</feed>

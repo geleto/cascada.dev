@@ -1,0 +1,13 @@
+{
+  "name": "Cascada",
+  "url": "https://cascada.dev",
+  "description": "Concurrency-first scripting and templating for JavaScript and TypeScript. Write familiar, sequential logic. Cascada handles the concurrency.",
+  "author": "Angel Popov",
+  "navigation": [
+    { "title": "Tutorial", "url": "/posts/cascada-script-intro/" },
+    { "title": "CascadaScript Doc", "url": "/cascada-script/" },
+    { "title": "Template Doc", "url": "/cascada-template/" },
+    { "title": "Blog", "url": "/blog/" },
+    { "title": "AI with Casai", "url": "/ai/" }
+  ]
+}

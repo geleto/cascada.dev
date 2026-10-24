@@ -1,21 +1,141 @@
 # cascada.dev
-The Cascada web page
+The Cascada website and blog, built with Eleventy.
 
-## Homepage
+## Development and publishing
 
-Run `npm run dev`, then open `http://localhost:3000`. No dependencies or build
-step are required. The development server binds to localhost only.
+Use Node.js 18 or newer. Run `npm ci` once, then `npm run dev` and open
+`http://localhost:3000`. Eleventy watches the content, layouts, and assets.
 
-The page is plain HTML, CSS and JavaScript. Publish `index.html`, `styles.css`,
-`main.js`, `logo.svg` and `headphones-animation.html` together on any static host.
-`docs/home.md` contains the original homepage copy. Navigation points to the
-existing tutorial and documentation; Playground is marked as coming soon until
-its URL is available.
+Run `npm run build` and publish **the contents of `dist/`** to your static host.
+The build clears old generated files first. No server-side runtime is needed.
+`npm test` builds the site and checks the generated navigation, local links,
+article images, feed, and homepage examples. Source files are not deployment
+artifacts. The feed is at `/feed.xml` and the sitemap at `/sitemap.xml`.
+
+## Homepage and shared design
+
+`index.html` keeps the homepage's original HTML content and interactive examples.
+Eleventy adds `_includes/layouts/base.njk`, the shared header and footer.
+Edit `_data/site.json` to change the site URL or menu on every page. The Tutorial
+link points to the migrated introduction; Blog points to `/blog/`.
+Playground stays marked as coming soon.
+The AI with Casai link opens `/ai/`, a short Casai overview maintained in `pages/ai.md`.
+The header spans the viewport, with the brand at the left and navigation plus
+GitHub grouped at the right. Every page shows the Cascada name beside the logo.
+At 960px and below the menu becomes a drop-down,
+with GitHub at its top right. Its links remain visible without JavaScript.
+
+`styles.css` and `main.js` are shared across the site. `content.css` adds scoped
+article and blog styles without changing the homepage. `docs/home.md` remains
+the original homepage copy and is excluded from the build.
 
 The concurrent-results example has Workflow and Code tabs, with the Code tab
 reusing the headphones script above. Code examples include copy icons when
 clipboard access is supported. The menu
 collapses on mobile, and all homepage text remains available without JavaScript.
+
+## Adding a blog post
+
+Create `posts/my-post.md`:
+
+```markdown
+---
+title: My post
+date: '2026-10-24'
+description: A short description for search results, social sharing, and the feed.
+tags: [cascada]
+---
+Write the article in Markdown. The layout supplies its title, date, and author.
+```
+
+`posts/posts.json` supplies the post layout and collection membership. The post
+appears automatically at `/posts/my-post/`, in `/blog/`, and in the feed.
+Posts are listed newest first. There are no automatic header images; add images
+explicitly in the body, as in `posts/cascada-kitchen-chef.md`.
+The blog listing automatically generates a plain-text excerpt from the beginning
+of each article, shortened to roughly 200 characters at a word boundary, with a
+Read more link. Editing the article updates its excerpt on the next build;
+there is no separate excerpt field to maintain.
+
+## Adding a regular page
+
+Create `pages/getting-started.md`:
+
+```markdown
+---
+title: Getting started
+description: Install Cascada and run your first script.
+---
+Write the page in Markdown, starting sections with `##`.
+```
+
+It becomes `/getting-started/`, using the shared menu, footer, and article
+styling. Nested paths work too: `pages/guides/setup.md` becomes `/guides/setup/`.
+Set `permalink: /another-url/` in front matter to override the URL. Regular
+pages do not enter the blog or feed. Add a link in `_data/site.json` when a page
+should appear in the menu; creating a page does not automatically add a menu item.
+
+Markdown supports embedded HTML for figures, custom formatting, and other rich
+content. You can also use `.html` files in `pages/`. HTML and Markdown content
+are not processed as Nunjucks, so Cascada examples using `{{ ... }}` and
+`{% ... %}` remain literal, including inside fenced code blocks. Layouts and
+explicit `.njk` files use Nunjucks normally.
+
+The four migrated Cascada articles retain their `/posts/.../` paths. The
+AI-development and Semachunk articles were not imported. The source blog in
+the separate repository is untouched; any redirects from its old domain must
+be configured there when this site is published.
+
+## Documentation
+
+The menu links to `/cascada-script/` and `/cascada-template/`. Both use the shared
+documentation layout with a generated H2/H3 index on the left, and contain their complete text and
+code in the initial HTML. They use the shared menu, `content.css`, code
+highlighting, and Markdown renderer (`scripts/markdown.mjs`). `docs.css` only
+adds the compact documentation spacing and sidebar layout. The mobile index
+uses a native expandable control; no iframe or runtime document loading is used.
+The index highlights the section being read and scrolls its own pane to keep
+that entry visible, without moving the document or keyboard focus.
+
+Refresh the docs explicitly from the sibling Cascada checkout:
+
+```sh
+npm run docs:update
+```
+
+Or choose a different local checkout:
+
+```sh
+npm run docs:update -- --source C:\Projects\cascada
+```
+
+This reads `docs/cascada/script.md` and `docs/cascada/template.md` from that
+checkout, saves copies in `docs/source/` with em dashes replaced by hyphens, generates HTML and both sidebar
+indexes in `docs/generated/`, and builds the site into `dist/`. It reads the
+checkout's current files, including local edits; it does not pull or change
+that repository. Update the source checkout yourself when you want newer docs.
+`docs/source/source.json` records the source commit, whether the source docs
+were modified, and their content hashes (with line endings normalized to LF).
+
+To regenerate from the saved Markdown without accessing the Cascada checkout:
+
+```sh
+npm run docs:generate
+```
+
+Commit both `docs/source/` and `docs/generated/` when refreshing documentation.
+Ordinary `npm run build` and `npm run dev` use the saved HTML fragments, so
+editing the site never refreshes the documentation. Neither docs command
+uploads anything or publishes to GitHub Pages. The existing site sitemap
+includes both documentation pages. Markdown downloads are available at
+`/cascada-script/README.md` and `/cascada-template/README.md`.
+
+The index builder and legacy heading IDs are adapted from Cascada's
+`scripts/docs-gen.js` (license in `docs/licenses/cascada.txt`). Fenced code is
+rendered by the same `markdown-it` module as Eleventy's other pages, with no
+separate Markdown engine or theme. Links between the docs and migrated posts
+resolve locally; references to other Markdown files point to the source commit
+on GitHub.
 
 ## Logo
 
