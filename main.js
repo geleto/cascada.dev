@@ -1,7 +1,33 @@
 // Small progressive enhancements; all page content is available without JavaScript.
+const siteHeader = document.querySelector('.site-header');
 const menuToggle = document.querySelector('.menu-toggle');
 const navigation = document.querySelector('#primary-nav');
 const smallScreen = window.matchMedia('(max-width: 960px)');
+
+// Scale the brand with the space that scrolls away, without changing document flow.
+let headerShrinkDistance;
+let previousHeaderShrink;
+let headerUpdateQueued = false;
+function updateHeaderScale() {
+  headerUpdateQueued = false;
+  const shrink = Math.min(1, Math.max(0, window.scrollY) / headerShrinkDistance);
+  if (shrink === previousHeaderShrink) return;
+  previousHeaderShrink = shrink;
+  siteHeader.style.setProperty('--header-shrink', String(shrink));
+}
+function measureHeaderShrink() {
+  const style = getComputedStyle(siteHeader);
+  headerShrinkDistance = Math.max(1, parseFloat(style.getPropertyValue('--header-expanded-height')) - parseFloat(style.getPropertyValue('--header-min-height')));
+  updateHeaderScale();
+}
+measureHeaderShrink();
+smallScreen.addEventListener('change', measureHeaderShrink);
+window.addEventListener('pageshow', updateHeaderScale);
+window.addEventListener('scroll', () => {
+  if (headerUpdateQueued) return;
+  headerUpdateQueued = true;
+  requestAnimationFrame(updateHeaderScale);
+}, { passive: true });
 
 function closeMenu() {
   menuToggle.setAttribute('aria-expanded', 'false');
@@ -9,6 +35,7 @@ function closeMenu() {
 }
 
 menuToggle.hidden = false;
+siteHeader.classList.add('has-menu-toggle');
 closeMenu();
 smallScreen.addEventListener('change', closeMenu);
 menuToggle.addEventListener('click', () => {
@@ -44,8 +71,10 @@ if (docsIndex) {
   function updateIndex() {
     updateQueued = false;
     let current = sections[0];
+    // Match the anchor clearance, allowing a pixel for fractional scroll positions.
+    const sectionThreshold = siteHeader.getBoundingClientRect().bottom + 41;
     for (const section of sections) {
-      if (section.heading.getBoundingClientRect().top <= 64) current = section;
+      if (section.heading.getBoundingClientRect().top <= sectionThreshold) current = section;
       else break;
     }
     // A short final section may never reach the top of the viewport.

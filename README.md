@@ -22,8 +22,14 @@ Playground stays marked as coming soon.
 The AI with Casai link opens `/ai/`, a short Casai overview maintained in `pages/ai.md`.
 The header spans the viewport, with the brand at the left and navigation plus
 GitHub grouped at the right. Every page shows the Cascada name beside the logo.
+The header stays visible while scrolling: its outer spacing scrolls away until
+it reaches 44px high, then stays compact. The logo and brand name shrink with it;
+scrolling back to the top restores their full size and the full header height.
+CSS pins the header, while `main.js` scales the brand with the scroll position.
+Anchor offsets and the documentation sidebar leave room for the menu.
 At 960px and below the menu becomes a drop-down,
-with GitHub at its top right. Its links remain visible without JavaScript.
+with GitHub at its top right. The drop-down scrolls within short viewports;
+without JavaScript its links remain visible in the page flow.
 
 The footer has Light, Dark, and Auto appearance choices. Auto is the default and
 follows the system setting; an explicit choice is remembered in local storage

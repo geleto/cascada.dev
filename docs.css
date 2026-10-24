@@ -19,7 +19,7 @@
 .docs-main .prose table { margin-block: 16px; font-size: 14px; }
 .docs-main .prose th, .docs-main .prose td { padding: 8px 12px; }
 .docs-main .prose hr { margin-block: 24px; }
-.docs-sidebar { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-right: 1px solid var(--line); padding-right: 20px; }
+.docs-sidebar { position: sticky; top: calc(var(--header-min-height) + 20px); align-self: start; max-height: calc(100vh - var(--header-min-height) - 40px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-right: 1px solid var(--line); padding-right: 20px; }
 .docs-index summary { cursor: pointer; font-size: 14px; font-weight: 700; padding-block: 4px 12px; color: var(--ink); }
 .docs-index ul { list-style: none; margin: 0; padding: 0; }
 .docs-index ul ul { margin-block: 3px 10px; padding-left: 12px; border-left: 1px solid var(--line); }
