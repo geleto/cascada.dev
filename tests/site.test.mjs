@@ -15,7 +15,7 @@ function htmlFiles(directory) {
     return entry.isDirectory() ? htmlFiles(path) : entry.name.endsWith('.html') ? [path] : [];
   });
 }
-const pages = htmlFiles(output).filter((path) => !path.endsWith('headphones-animation.html'));
+const pages = htmlFiles(output).filter((path) => !path.endsWith('headphones-workflow.html'));
 
 test('all pages share the menu, assets, and one primary heading', () => {
   const nav = JSON.parse(readFileSync('_data/site.json', 'utf8')).navigation;
@@ -56,7 +56,7 @@ test('every page supplies the shared appearance control and initializes it befor
     }
     assert.match(footer, /value="auto" checked/);
   }
-  assert.match(read('headphones-animation.html'), /<script src="\.\/theme.js"><\/script>/);
+  assert.match(read('demos/headphones-workflow.html'), /<script src="\/theme.js"><\/script>/);
 });
 
 test('authored posts appear in the blog and feed, without the excluded imports', () => {
@@ -90,11 +90,19 @@ test('articles have no header images; the Kitchen Chef image is in its body', ()
 
 test('homepage preserves literal Cascada templates and interactive examples', () => {
   const home = read('index.html');
+  assert.ok(existsSync('pages/index.md'), 'the homepage is authored in Markdown');
+  for (const id of ['hero', 'why', 'simple', 'concurrent', 'results', 'errors', 'sequential', 'javascript', 'templates', 'casai']) {
+    assert.match(home, new RegExp(`<h[12] id="${id}-title"`), `stable ${id} heading`);
+  }
+  assert.equal((home.match(/<pre tabindex="0" aria-label="[^"]+">/g) || []).length, 9, 'code examples keep their labels and keyboard access');
+  assert.match(home, /<p class="tagline"><strong>/);
+  assert.match(home, /<ol class="workflow-steps">/);
+  assert.match(home, /<ul class="feature-list">/);
   assert.ok(home.includes('{{ topic }}'));
   assert.ok(home.includes('{% for url in urls %}'));
   assert.ok(home.includes('Model: {{ product }}'));
   assert.ok(home.includes('product: z.string()'));
   assert.equal((home.match(/class="example-tablist"/g) || []).length, 2);
-  assert.equal((home.match(/src="\.\/headphones-animation.html\?embedded=1"/g) || []).length, 2);
+  assert.equal((home.match(/src="\/demos\/headphones-workflow.html\?embedded=1"/g) || []).length, 2);
   assert.doesNotMatch(home, /href="\/content.css"/);
 });

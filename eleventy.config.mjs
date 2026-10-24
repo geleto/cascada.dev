@@ -15,10 +15,10 @@ export default function (eleventyConfig) {
     'docs/source/template.md': 'cascada-template/README.md',
   });
 
-  for (const path of ['README.md', 'docs/**', 'scripts/**', 'tests/**', 'headphones-animation.html']) {
+  for (const path of ['README.md', 'docs/**', 'scripts/**', 'tests/**', 'demos/**']) {
     eleventyConfig.ignores.add(path);
   }
-  for (const path of ['styles.css', 'content.css', 'docs.css', 'main.js', 'theme.js', 'logo.svg', 'headphones-animation.html', 'images']) {
+  for (const path of ['styles.css', 'content.css', 'docs.css', 'main.js', 'theme.js', 'logo.svg', 'demos', 'images']) {
     eleventyConfig.addPassthroughCopy(path);
   }
 

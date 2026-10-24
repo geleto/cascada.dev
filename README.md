@@ -14,8 +14,22 @@ artifacts. The feed is at `/feed.xml` and the sitemap at `/sitemap.xml`.
 
 ## Homepage and shared design
 
-`index.html` keeps the homepage's original HTML content and interactive examples.
-Eleventy adds `_includes/layouts/base.njk`, the shared header and footer.
+`pages/index.md` mixes Markdown content with HTML wrappers for the homepage layout.
+Edit headings, paragraphs, links, lists, and fenced code samples in Markdown.
+The HTML sections, columns, captions, tabs, and demo frames retain the existing
+design and interactive controls. Leave a blank line between HTML wrappers and
+Markdown content so Markdown is parsed normally.
+
+The shared Markdown renderer supports attributes: `{#simple-title}` keeps a
+heading's stable ID, and `{.lead}` on the line after a paragraph applies its
+lead style. Fenced code can carry attributes after the language name, such as
+`cascada {tabindex="0" aria-label="Greeting example"}`. Focus and label attributes
+go on the code block's `<pre>`; IDs and data attributes go on `<code>`, preserving
+the shared examples and copy controls. Cascada's `{{ ... }}` and `{% ... %}`
+remain literal because Markdown content is not preprocessed as a template.
+
+Eleventy renders the complete page at build time and adds
+`_includes/layouts/base.njk`, the shared header and footer.
 Edit `_data/site.json` to change the site URL or menu on every page. The Tutorial
 link points to the migrated introduction; Blog points to `/blog/`.
 Playground stays marked as coming soon.
@@ -42,7 +56,9 @@ article and blog styles without changing the homepage. `docs/home.md` remains
 the original homepage copy and is excluded from the build.
 
 The concurrent-results example has Workflow and Code tabs, with the Code tab
-reusing the headphones script above. Code examples include copy icons when
+reusing the headphones script above. Both homepage workflow demos embed
+`demos/headphones-workflow.html`, a standalone HTML animation copied directly
+into the build. Code examples include copy icons when
 clipboard access is supported. The menu
 collapses on mobile, and all homepage text remains available without JavaScript.
 
