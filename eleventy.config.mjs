@@ -18,7 +18,7 @@ export default function (eleventyConfig) {
   for (const path of ['README.md', 'docs/**', 'scripts/**', 'tests/**', 'headphones-animation.html']) {
     eleventyConfig.ignores.add(path);
   }
-  for (const path of ['styles.css', 'content.css', 'docs.css', 'main.js', 'logo.svg', 'headphones-animation.html', 'images']) {
+  for (const path of ['styles.css', 'content.css', 'docs.css', 'main.js', 'theme.js', 'logo.svg', 'headphones-animation.html', 'images']) {
     eleventyConfig.addPassthroughCopy(path);
   }
 

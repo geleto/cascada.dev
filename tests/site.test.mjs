@@ -43,6 +43,22 @@ test('generated pages have no broken local links or media', () => {
   }
 });
 
+test('every page supplies the shared appearance control and initializes it before CSS', () => {
+  assert.ok(existsSync(join(output, 'theme.js')));
+  for (const path of pages) {
+    const html = readFileSync(path, 'utf8');
+    const initializer = html.indexOf('<script src="/theme.js"></script>');
+    assert.ok(initializer > 0 && initializer < html.indexOf('<link rel="stylesheet"'), path);
+    const footer = html.match(/<footer class="site-footer">[\s\S]*?<\/footer>/)?.[0];
+    assert.match(footer, /<legend class="visually-hidden">Appearance<\/legend>/);
+    for (const value of ['light', 'dark', 'auto']) {
+      assert.match(footer, new RegExp(`type="radio" name="theme" value="${value}"`));
+    }
+    assert.match(footer, /value="auto" checked/);
+  }
+  assert.match(read('headphones-animation.html'), /<script src="\.\/theme.js"><\/script>/);
+});
+
 test('authored posts appear in the blog and feed, without the excluded imports', () => {
   const blog = read('blog/index.html');
   const feed = read('feed.xml');

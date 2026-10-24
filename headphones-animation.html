@@ -10,17 +10,27 @@
       document.documentElement.classList.add('is-embedded');
     }
   </script>
+  <script src="./theme.js"></script>
   <style>
     :root {
-      color-scheme: light;
-      --ink: #151b29;
-      --secondary: #576172;
-      --quiet: #7a8492;
-      --rule: #d9dee7;
-      --hairline: #e9edf2;
-      --surface: #ffffff;
-      --track: #e7ebf0;
-      --pending-disc: #aab3c1;
+      color-scheme: light dark;
+      --ink: light-dark(#151b29, #f0f2f6);
+      --heading: light-dark(#151b29, #f3f6fa);
+      --secondary: light-dark(#576172, #abb4c3);
+      --quiet: light-dark(#7a8492, #828c9d);
+      --rule: light-dark(#d9dee7, #3a4556);
+      --hairline: light-dark(#e9edf2, #303a49);
+      --surface: light-dark(#ffffff, #131b25);
+      --track: light-dark(#e7ebf0, #303b4b);
+      --pending-disc: light-dark(#aab3c1, #667386);
+      --hover: light-dark(#f4f6f9, #273244);
+      --scrub: light-dark(#1c385b, #88afe5);
+      --focus: light-dark(#1859c9, #8cc9ff);
+      --headphone-ink: light-dark(#ffffff, #131b25);
+      --product-1: light-dark(#164a9b, #5a95ed);
+      --product-2: light-dark(#b44742, #df807b);
+      --product-3: light-dark(#173b5e, #60acc8);
+      --product-4: light-dark(#C98800, #e6b44c);
       --token: 37px;
       --process-token: 32px;
       --result-token: 37px;
@@ -28,31 +38,33 @@
       --row-gap: 11px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"] { color-scheme: dark; }
     * { box-sizing: border-box; }
     html { background: var(--surface); }
     body { margin: 0; color: var(--ink); background: var(--surface); font-family: inherit; -webkit-font-smoothing: antialiased; }
     button, input { font: inherit; }
-    button:focus-visible, input:focus-visible { outline: 2px solid #1859c9; outline-offset: 3px; }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
     .pipeline { width: 100%; min-width: 0; position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--rule); }
     .transport { display: flex; align-items: center; flex: none; gap: 7px; white-space: nowrap; }
     .clock { font: 600 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--secondary); font-variant-numeric: tabular-nums; min-width: 40px; text-align: left; }
     .control { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink); padding: 5px 8px; font-size: 11px; line-height: 1; cursor: pointer; height: 26px; }
-    .control:hover { background: #f4f6f9; }
+    .control:hover { background: var(--hover); }
     .control svg { display: block; width: 12px; height: 12px; fill: currentColor; }
     .stage { padding: 13px 18px 12px; position: relative; min-width: 0; }
     .stage + .stage { border-top: 1px solid var(--rule); }
     .stage-head { margin: 0 0 9px; }
-    .stage-title { margin: 0; font-size: 20px; font-weight: 610; letter-spacing: -.025em; line-height: 1.27; }
+    .stage-title { margin: 0; color: var(--heading); font-size: 20px; font-weight: 610; letter-spacing: -.025em; line-height: 1.27; }
     .slot-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
     .slot { position: relative; display: flex; justify-content: center; align-items: center; min-width: 0; }
     .slot + .slot { border-left: 1px solid var(--hairline); }
     .slot-generate { height: 63px; }
     .generation-track { position: relative; height: 6px; margin-top: 8px; background: var(--track); overflow: hidden; }
-    .generation-fill { display: block; width: 0; height: 100%; background: #000; }
+    .generation-fill { display: block; width: 0; height: 100%; background: var(--ink); }
     .generation-ticks { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); pointer-events: none; }
     .generation-ticks span + span { border-left: 1px solid var(--surface); }
     .slot-results { height: 63px; }
-    .slot-index { position: absolute; top: 1px; left: 13px; color: #171c26; font: 550 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .slot-index { position: absolute; top: 1px; left: 13px; color: var(--ink); font: 550 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .mount { width: var(--token); height: var(--token); display: grid; place-items: center; flex: none; }
     .mount-result { width: var(--result-token); height: var(--result-token); }
     .disc { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; background: var(--product-color); box-shadow: none; }
@@ -62,6 +74,9 @@
     .disc.is-completed { opacity: .42; filter: saturate(.30) brightness(1.16); }
     .process-row.is-completed .progress-fill { opacity: .49; filter: saturate(.36) brightness(1.08); }
     .process-row.is-completed .progress-label { opacity: .59; }
+    :root[data-theme="dark"] .disc.is-completed { opacity: .48; }
+    :root[data-theme="dark"] .process-row.is-completed .progress-fill { opacity: .54; }
+    :root[data-theme="dark"] .process-row.is-completed .progress-label { opacity: .8; }
     .stage-process { padding-bottom: 4px; }
     .process-table { --cols: var(--icon-column) repeat(4, minmax(0, 1fr)); width: 100%; }
     .process-row { display: grid; grid-template-columns: var(--cols); column-gap: var(--row-gap); align-items: center; min-width: 0; height: 60px; border-bottom: 1px solid var(--hairline); }
@@ -81,11 +96,11 @@
     .flying-disc svg { width: 58%; height: 58%; }
     .timebar { border-top: 1px solid var(--rule); display: flex; gap: 12px; align-items: center; padding: 7px 16px; min-height: 40px; }
     .scrub { flex: 1; width: 100%; height: 16px; min-width: 0; margin: 0; cursor: pointer; -webkit-appearance: none; appearance: none; background: transparent; }
-    .scrub::-webkit-slider-runnable-track { height: 3px; border-radius: 0; background: linear-gradient(to right, #1c385b 0%, #1c385b var(--percentage, 0%), var(--track) var(--percentage, 0%), var(--track) 100%); }
+    .scrub::-webkit-slider-runnable-track { height: 3px; border-radius: 0; background: linear-gradient(to right, var(--scrub) 0%, var(--scrub) var(--percentage, 0%), var(--track) var(--percentage, 0%), var(--track) 100%); }
     .scrub::-moz-range-track { height: 3px; background: var(--track); }
-    .scrub::-moz-range-progress { height: 3px; background: #1c385b; }
-    .scrub::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 8px; height: 11px; border-radius: 0; background: #1c385b; margin-top: -4px; }
-    .scrub::-moz-range-thumb { width: 8px; height: 11px; border: 0; border-radius: 0; background: #1c385b; }
+    .scrub::-moz-range-progress { height: 3px; background: var(--scrub); }
+    .scrub::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 8px; height: 11px; border-radius: 0; background: var(--scrub); margin-top: -4px; }
+    .scrub::-moz-range-thumb { width: 8px; height: 11px; border: 0; border-radius: 0; background: var(--scrub); }
     .live-status { font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--secondary); font-variant-numeric: tabular-nums; min-width: 36px; text-align: right; white-space: nowrap; }
     @media (max-width: 600px) {
       :root { --token: 32px; --process-token: 29px; --result-token: 32px; --icon-column: 32px; --row-gap: 6px; }
@@ -113,15 +128,6 @@
       .timebar { gap: 6px; }
       .transport { gap: 4px; }
       .clock { min-width: 34px; font-size: 10px; }
-    }
-    @media (prefers-color-scheme: dark) {
-      :root:not(.is-embedded) { color-scheme: dark; --ink:#f0f2f6; --secondary:#abb4c3; --quiet:#828c9d; --rule:#3a4556; --hairline:#303a49; --surface:#151c28; --track:#303b4b; --pending-disc:#667386; }
-      :root:not(.is-embedded) .slot-index { color: #f0f2f6; }
-      :root:not(.is-embedded) .control:hover { background: #273244; }
-      :root:not(.is-embedded) .disc.is-completed { opacity: .48; }
-      :root:not(.is-embedded) .process-row.is-completed .progress-fill { opacity: .54; }
-      :root:not(.is-embedded) .scrub::-webkit-slider-runnable-track { background: linear-gradient(to right, #88afe5 0%, #88afe5 var(--percentage, 0%), var(--track) var(--percentage, 0%), var(--track) 100%); }
-      :root:not(.is-embedded) .scrub::-webkit-slider-thumb, :root:not(.is-embedded) .scrub::-moz-range-thumb { background: #88afe5; }
     }
   </style>
 </head>
@@ -165,12 +171,12 @@
 <script>
 (() => {
   'use strict';
-  const icon = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.7 13.2v-2.1a7.3 7.3 0 0 1 14.6 0v2.1" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><rect x="3.4" y="12" width="5.0" height="7.5" rx="1.4" fill="#fff"/><rect x="15.6" y="12" width="5.0" height="7.5" rx="1.4" fill="#fff"/></svg>`;
+  const icon = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.7 13.2v-2.1a7.3 7.3 0 0 1 14.6 0v2.1" fill="none" stroke="var(--headphone-ink)" stroke-width="2.2" stroke-linecap="round"/><rect x="3.4" y="12" width="5.0" height="7.5" rx="1.4" fill="var(--headphone-ink)"/><rect x="15.6" y="12" width="5.0" height="7.5" rx="1.4" fill="var(--headphone-ink)"/></svg>`;
   const products = [
-    { n:1, color:'#164a9b', generated:0.62, durations:[3.7,6.1,2.0,1.45] },
-    { n:2, color:'#b44742', generated:1.80, durations:[2.2,3.2,2.4,1.20] },
-    { n:3, color:'#173b5e', generated:2.95, durations:[1.35,1.7,1.15,1.00] },
-    { n:4, color:'#C98800', generated:4.15, durations:[1.4,2.15,1.5,1.00] }
+    { n:1, color:'var(--product-1)', generated:0.62, durations:[3.7,6.1,2.0,1.45] },
+    { n:2, color:'var(--product-2)', generated:1.80, durations:[2.2,3.2,2.4,1.20] },
+    { n:3, color:'var(--product-3)', generated:2.95, durations:[1.35,1.7,1.15,1.00] },
+    { n:4, color:'var(--product-4)', generated:4.15, durations:[1.4,2.15,1.5,1.00] }
   ];
   const transferInDelay = .17, inFlightDuration = .78;
   const transferOutDelay = .12, outFlightDuration = .78;

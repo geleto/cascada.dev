@@ -19,7 +19,7 @@
 .prose { display: flow-root; color: var(--ink); font-size: 18px; line-height: 1.75; overflow-wrap: anywhere; }
 .prose > :first-child { margin-top: 0; }
 .prose p { margin-bottom: 1.25em; }
-.prose h2, .prose h3, .prose h4 { clear: both; color: var(--ink); margin-block: 1.7em .7em; line-height: 1.25; letter-spacing: -.025em; text-wrap: initial; }
+.prose h2, .prose h3, .prose h4 { clear: both; color: var(--heading); margin-block: 1.7em .7em; line-height: 1.25; letter-spacing: -.025em; text-wrap: initial; }
 .prose h2 { font-size: clamp(25px, 3.3vw, 32px); }
 .prose h3 { font-size: 24px; }
 .prose h4 { font-size: 20px; }
@@ -34,8 +34,8 @@
 .prose p > img:only-child { margin-block: 30px; }
 .prose figure { margin-block: 30px; }
 .prose figcaption { margin-top: 10px; font-size: 14px; color: var(--muted); }
-.prose :not(pre) > code { color: #873b37; background: #eee8e5; border-radius: 3px; padding: .12em .25em; font-size: .85em; }
-.prose pre { clear: both; margin-block: 24px; border: 1px solid var(--line); border-radius: 6px; background: #f2f4f2; font-size: 14px; line-height: 1.8; overflow-wrap: normal; }
+.prose :not(pre) > code { color: var(--inline-code); background: var(--inline-background); border-radius: 3px; padding: .12em .25em; font-size: .85em; }
+.prose pre { clear: both; margin-block: 24px; border: 1px solid var(--line); border-radius: 6px; background: var(--code-background); font-size: 14px; line-height: 1.8; overflow-wrap: normal; }
 .prose table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin-block: 24px; font-size: 16px; }
 .prose th, .prose td { padding: 12px 16px; border: 1px solid var(--line); text-align: left; }
 .prose th { background: var(--light); font-weight: 650; }

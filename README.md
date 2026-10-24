@@ -25,6 +25,12 @@ GitHub grouped at the right. Every page shows the Cascada name beside the logo.
 At 960px and below the menu becomes a drop-down,
 with GitHub at its top right. Its links remain visible without JavaScript.
 
+The footer has Light, Dark, and Auto appearance choices. Auto is the default and
+follows the system setting; an explicit choice is remembered in local storage
+across pages and visits. `theme.js` runs before the stylesheets to avoid a flash
+of the wrong theme and keeps the embedded workflow examples in sync. Theme
+colors live in `styles.css`; without JavaScript the site follows the system.
+
 `styles.css` and `main.js` are shared across the site. `content.css` adds scoped
 article and blog styles without changing the homepage. `docs/home.md` remains
 the original homepage copy and is excluded from the build.
