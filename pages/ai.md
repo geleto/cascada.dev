@@ -5,7 +5,7 @@ description: Build AI agents and workflows with readable code, automatic concurr
 
 <p class="content-intro">Write the workflow. Let Cascada handle the concurrency.</p>
 
-**Casai** is a TypeScript library for building AI agents and workflows, powered by Cascada and the Vercel AI SDK. Connect model calls, tools, and your own APIs with familiar, readable code.
+[Casai](https://github.com/geleto/casai) is a TypeScript library for building AI agents and workflows, powered by Cascada and the Vercel AI SDK. Connect model calls, tools, and your own APIs with familiar, readable code.
 
 - **Concurrent by default.** Independent operations run together automatically. Each step waits only for the results it needs.
 - **Small components, powerful workflows.** Compose generators, tools, and multi-step agents from reusable, callable building blocks.

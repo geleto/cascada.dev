@@ -59,7 +59,8 @@ remain literal because Markdown content is not preprocessed as a template.
 Eleventy renders the complete page at build time and adds
 `_includes/layouts/base.njk`, the shared header and footer.
 Edit `_data/site.json` to change the site URL or menu on every page. The Tutorial
-link points to the migrated introduction; Blog points to `/blog/`.
+link points to the migrated introduction; Documentation points to `/documentation/`;
+Blog points to `/blog/`.
 Playground stays marked as coming soon.
 The AI with Casai link opens `/ai/`, a short Casai overview maintained in `pages/ai.md`.
 The footer links to `pages/about.md`. Its email username and domain are stored
@@ -151,7 +152,11 @@ be configured there when this site is published.
 
 ## Documentation
 
-The menu links to `/cascada-script/` and `/cascada-template/`. Both use the shared
+The menu links to `/documentation/`, maintained in `pages/documentation.md`, with
+the introduction tutorial, language reference, Cascada and Casai repositories,
+AI agent examples, and the non-technical kitchen-chef introduction.
+
+The reference pages remain at `/cascada-script/` and `/cascada-template/`. Both use the shared
 documentation layout with a generated H2/H3 index on the left, and contain their complete text and
 code in the initial HTML. They use the shared menu, `content.css`, code
 highlighting, and Markdown renderer (`scripts/markdown.mjs`). `docs.css` only
