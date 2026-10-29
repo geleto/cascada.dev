@@ -125,14 +125,15 @@ pre code { color: var(--code-ink); }
 .token-number { color: var(--token-number); }
 .token-delimiter { color: var(--token-delimiter); }
 .animation-panel iframe { display: block; width: 100%; border: 0; background: var(--surface); color-scheme: inherit; }
-.site-footer { background: var(--light); border-top: 1px solid var(--line); padding-block: 36px; }
+.site-footer { background: var(--blue-dark); color: #fff; padding-block: 36px; }
 .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 30px; }
-.footer-brand { display: inline-flex; align-items: center; gap: 13px; color: var(--blue); font-size: 20px; font-weight: 700; text-decoration: none; }
+.footer-brand { display: inline-flex; align-items: center; gap: 13px; color: inherit; font-size: 20px; font-weight: 700; text-decoration: none; }
 .footer-brand .brand-mark { width: 30px; height: 30px; }
 .footer-actions { display: flex; align-items: center; gap: 28px; }
-.site-footer nav { display: flex; align-items: center; gap: 28px; color: var(--muted); font-size: 14px; }
+.site-footer nav { display: flex; align-items: center; gap: 28px; color: inherit; font-size: 14px; }
 .site-footer nav a { padding-block: 8px; text-decoration: none; white-space: nowrap; }
 .site-footer nav a:hover { text-decoration: underline; }
+.site-footer a:focus-visible { outline-color: #fff; }
 .footer-appearance { display: flex; flex-shrink: 0; }
 .theme-switch { display: inline-flex; gap: 2px; min-width: 0; margin: 0; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 .theme-switch label { position: relative; cursor: pointer; }
