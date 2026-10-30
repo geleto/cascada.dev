@@ -27,7 +27,9 @@ home: true
 
 Modern applications often spend much of their time waiting - fetching pages, calling web APIs, waiting for AI models to respond, querying databases… Operations often take seconds, even minutes.
 
-Cascada runs these operations concurrently for you, inside your existing applications and AI agents. Orchestrate them with **[CascadaScript](/cascada-script/)**, a simple scripting language with familiar syntax, or generate prompts, HTML and other text with **[Cascada Template](/cascada-template/)**.
+Your code already says what depends on what. Cascada uses that information to run independent operations concurrently, waiting only for the results they need. **No `async`, no `await`, no juggling promises.**
+
+Orchestrate workflows with **[CascadaScript](/cascada-script/)**, a simple scripting language with familiar syntax, or generate prompts, HTML and other text with **[Cascada Template](/cascada-template/)**. Both run inside your existing JavaScript and TypeScript applications and AI agents.
 
 </div>
 </div>
@@ -42,7 +44,7 @@ Cascada runs these operations concurrently for you, inside your existing applica
 Instantly familiar to JavaScript and Python developers.
 {.lead}
 
-Variables, functions, conditionals, loops - the building blocks you already know. [CascadaScript](/cascada-script/) keeps the syntax simple and puts the complexity in the execution engine, not in your code.
+Variables, functions, conditionals, loops - the building blocks you already know. [CascadaScript](/cascada-script/) keeps the syntax simple, while its engine handles the complexity of running operations concurrently.
 
 </div>
 <figure class="code-panel">
