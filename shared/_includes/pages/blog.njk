@@ -1,13 +1,7 @@
----
-layout: layouts/base.njk
-title: Blog
-description: Ideas, tutorials, and architecture behind Cascada and concurrent programming.
-permalink: /blog/
----
 <div class="container reading-column">
   <header class="article-header blog-header">
     <h1>Blog</h1>
-    <p class="content-intro">Ideas, tutorials, and architecture behind Cascada.</p>
+    <p class="content-intro">{{ site.blogDescription | escape }}</p>
     <a class="section-link" href="/feed.xml">Subscribe via RSS <span aria-hidden="true">↗</span></a>
   </header>
   <ol class="post-list" reversed>

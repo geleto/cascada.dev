@@ -3,7 +3,7 @@
 .reading-column { max-width: 800px; }
 .article-header { margin-bottom: 44px; }
 .article-header h1 { margin-block: 20px 22px; font-size: clamp(34px, 5vw, 52px); line-height: 1.12; letter-spacing: -.04em; text-wrap: balance; }
-.section-link, .read-post { color: var(--blue); font-size: 15px; font-weight: 650; text-decoration: none; }
+.section-link, .read-post { font-size: 15px; font-weight: 650; text-decoration: none; }
 .section-link:hover, .read-post:hover { text-decoration: underline; }
 .article-meta { color: var(--muted); font-size: 14px; line-height: 1.7; }
 .article-meta span { padding-inline: .3em; }
@@ -14,7 +14,7 @@
 .post-summary .article-meta { margin-bottom: 12px; }
 .post-summary h2 { margin-bottom: 16px; font-size: clamp(25px, 3.3vw, 32px); line-height: 1.2; text-wrap: initial; }
 .post-summary h2 a { text-decoration: none; }
-.post-summary h2 a:hover { color: var(--blue); text-decoration: underline; }
+.post-summary h2 a:hover { text-decoration: underline; }
 .post-summary > p:not(.article-meta) { color: var(--muted); font-size: 18px; line-height: 1.65; }
 .prose { display: flow-root; color: var(--ink); font-size: 18px; line-height: 1.75; overflow-wrap: anywhere; }
 .prose > :first-child { margin-top: 0; }
@@ -23,11 +23,10 @@
 .prose h2 { font-size: clamp(25px, 3.3vw, 32px); }
 .prose h3 { font-size: 24px; }
 .prose h4 { font-size: 20px; }
-.prose a { color: var(--blue); }
 .prose ul, .prose ol { padding-left: 1.5em; margin-block: 0 1.4em; }
 .prose li { margin-block: .4em; padding-left: .15em; }
 .prose li > p { margin-bottom: .7em; }
-.prose blockquote { margin: 1.5em 0; padding: 18px 24px; border-left: 4px solid var(--blue); background: var(--light); color: var(--muted); }
+.prose blockquote { margin: 1.5em 0; padding: 18px 24px; border-left: 4px solid var(--accent); background: var(--light); color: var(--muted); }
 .prose blockquote > :last-child { margin-bottom: 0; }
 .prose hr { clear: both; height: 0; border: 0; border-top: 1px solid var(--line); margin-block: 36px; }
 .prose img { display: block; max-width: 100%; height: auto; border-radius: 6px; }

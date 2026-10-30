@@ -25,8 +25,8 @@
 .docs-index ul ul { margin-block: 3px 10px; padding-left: 12px; border-left: 1px solid var(--line); }
 .docs-index a { display: block; padding: 4px 8px; font-size: 13px; line-height: 1.4; color: var(--muted); text-decoration: none; overflow-wrap: anywhere; }
 .docs-index nav > ul > li > a { color: var(--ink); font-weight: 650; }
-.docs-index a:hover, .docs-index a:focus-visible { color: var(--blue); text-decoration: underline; }
-.docs-index a[aria-current="location"] { color: var(--blue); background: var(--light); box-shadow: inset 3px 0 var(--blue); font-weight: 650; }
+.docs-index a:hover, .docs-index a:focus-visible { color: var(--accent); text-decoration: underline; }
+.docs-index a[aria-current="location"] { color: var(--accent); background: var(--light); box-shadow: inset 3px 0 var(--accent); font-weight: 650; }
 @media (max-width: 900px) {
   .docs-layout { grid-template-columns: 220px minmax(0, 1fr); gap: 24px; }
 }

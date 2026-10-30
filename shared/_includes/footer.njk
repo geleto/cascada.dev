@@ -1,6 +1,6 @@
   <footer class="site-footer">
     <div class="container footer-inner">
-      <a class="footer-brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Cascada</span></a>
+      <a class="footer-brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>{{ site.name | escape }}</span></a>
       <div class="footer-actions">
         <div class="footer-appearance" hidden>
           <fieldset class="theme-switch">
@@ -11,8 +11,7 @@
           </fieldset>
         </div>
         <nav aria-label="Footer navigation">
-          <a href="https://github.com/geleto/cascada">GitHub <span aria-hidden="true">↗</span></a>
-          <a href="/about/"{% if page.url == '/about/' %} aria-current="page"{% endif %}>About</a>
+          {% for item in site.footerNavigation %}<a href="{{ item.url | escape }}"{% if page.url == item.url %} aria-current="page"{% endif %}>{{ item.title | escape }}</a>{% endfor %}
           <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
         </nav>
       </div>

@@ -1,0 +1,5 @@
+:root {
+  --brand: light-dark(#b44742, #873a36);
+  --accent: light-dark(#145b94, #7abaff);
+  --brand-deep: #173b5e;
+}

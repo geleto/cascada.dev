@@ -1,0 +1,11 @@
+/* Deep teal for the header; navy for Why Casai and the footer. */
+:root {
+  --brand: light-dark(#1b666b, #12575c);
+  --accent: light-dark(#0e5b62, #89d9d4);
+  --brand-deep: #1c3350;
+  --inline-code: light-dark(#16675e, #89d9c9);
+  --inline-background: light-dark(#e4efeb, #233a38);
+  --focus: light-dark(#0e5b62, #89d9d4);
+  --token-keyword: light-dark(#13766d, #89d9c9);
+  --token-function: light-dark(#286d83, #99d8ee);
+}

@@ -1,27 +1,27 @@
 {
-  "name": "cascada-dev",
+  "name": "cascada-websites",
   "version": "1.0.0",
   "private": true,
-  "description": "The Cascada website and blog",
+  "description": "Shared infrastructure for the Cascada and Casai websites",
   "scripts": {
-    "dev": "eleventy --serve",
-    "start": "eleventy --serve",
-    "build": "node scripts/clean.mjs && eleventy",
-    "publish": "npm run build && node scripts/publish.mjs",
+    "dev": "node scripts/dev.mjs",
+    "start": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "publish": "node scripts/publish.mjs",
     "docs:update": "node scripts/docs.mjs --refresh",
     "docs:generate": "node scripts/docs.mjs",
-    "test": "npm run build && node --test"
+    "test": "npm run build && node --test --test-concurrency=1"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18.20.4"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.1.7",
     "@11ty/eleventy-plugin-rss": "^2.0.4",
-    "basic-ftp": "^6.2.3",
     "dotenv": "^18.0.9",
     "markdown-it": "^14.3.3",
     "markdown-it-anchor": "^9.2.1",
-    "markdown-it-attrs": "^5.0.1"
+    "markdown-it-attrs": "^5.0.1",
+    "ssh2-sftp-client": "^12.1.1"
   }
 }

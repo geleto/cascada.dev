@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 
-const output = resolve('dist');
+const output = resolve('dist/cascada.dev');
 const read = (path) => readFileSync(join(output, path), 'utf8');
 const posts = [
   'cascada-script-intro', 'cascada-kitchen-chef',
@@ -18,7 +18,7 @@ function htmlFiles(directory) {
 const pages = htmlFiles(output).filter((path) => !path.endsWith('headphones-workflow.html'));
 
 test('all pages share the menu, assets, and one primary heading', () => {
-  const nav = JSON.parse(readFileSync('_data/site.json', 'utf8')).navigation;
+  const nav = JSON.parse(readFileSync('sites/cascada.dev/_data/site.json', 'utf8')).navigation;
   for (const path of pages) {
     const html = readFileSync(path, 'utf8');
     const menu = html.match(/<nav id="primary-nav"[\s\S]*?<\/nav>/)?.[0];
@@ -62,7 +62,7 @@ test('every page supplies the shared appearance control and initializes it befor
 test('authored posts appear in the blog and feed, without the excluded imports', () => {
   const blog = read('blog/index.html');
   const feed = read('feed.xml');
-  const authoredPosts = readdirSync('posts').filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3));
+  const authoredPosts = readdirSync('sites/cascada.dev/posts').filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3));
   assert.equal((blog.match(/class="post-summary"/g) || []).length, authoredPosts.length);
   assert.equal((feed.match(/<entry>/g) || []).length, authoredPosts.length);
   for (const slug of authoredPosts) {
@@ -101,7 +101,7 @@ test('articles have no header images; the Kitchen Chef image is in its body', ()
 
 test('homepage preserves literal Cascada templates and interactive examples', () => {
   const home = read('index.html');
-  assert.ok(existsSync('pages/index.md'), 'the homepage is authored in Markdown');
+  assert.ok(existsSync('sites/cascada.dev/pages/index.md'), 'the homepage is authored in Markdown');
   for (const id of ['hero', 'why', 'simple', 'concurrent', 'results', 'errors', 'sequential', 'javascript', 'templates', 'casai']) {
     assert.match(home, new RegExp(`<h[12] id="${id}-title"`), `stable ${id} heading`);
   }

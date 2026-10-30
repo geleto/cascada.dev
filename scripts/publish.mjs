@@ -1,30 +1,31 @@
 import { readdir, stat } from 'node:fs/promises';
-import { dirname, join, posix, resolve } from 'node:path';
+import { join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Client } from 'basic-ftp';
-import dotenv from 'dotenv';
+import { parseSiteArgs, projectRoot } from './sites.mjs';
+import { buildSites } from './build.mjs';
+import { loadPublishEnvironment, redactPublishError } from './publish-env.mjs';
+import { SftpPublishClient } from './publish-sftp.mjs';
 
-const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const outputDirectory = join(projectRoot, 'dist');
-
-export function getPublishConfig(env) {
+export function getPublishConfig(env, site) {
   const required = (key) => {
-    if (typeof env[key] !== 'string' || !env[key].trim()) throw new Error(`Set ${key} in .env before publishing.`);
-    if (/[\r\n\0]/.test(env[key])) throw new Error(`${key} must be a single line.`);
-    return env[key];
+    const result = env[key];
+    const location = site ? `${site.input}/.env (or ${site.envPrefix}_${key} in the shell/CI environment)` : 'the site .env file';
+    if (typeof result !== 'string' || !result.trim()) throw new Error(`Set ${key} in ${location} before publishing.`);
+    if (/[\r\n\0]/.test(result)) throw new Error(`${key} must be a single line.`);
+    return result;
   };
-  const host = required('OVH_FTP_HOST').trim();
-  const user = required('OVH_FTP_USER').trim();
-  const password = required('OVH_FTP_PASSWORD');
-  const remoteDir = required('OVH_FTP_REMOTE_DIR').trim();
-  const port = Number(env.OVH_FTP_PORT || 21);
-  const secure = env.OVH_FTP_SECURE ?? 'true';
-  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('OVH_FTP_PORT must be between 1 and 65535.');
-  if (!['true', 'false'].includes(secure)) throw new Error('OVH_FTP_SECURE must be true or false.');
+  const host = required('OVH_SFTP_HOST').trim();
+  const user = required('OVH_SFTP_USER').trim();
+  const password = required('OVH_SFTP_PASSWORD');
+  const remoteDir = required('OVH_SFTP_REMOTE_DIR').trim();
+  const port = Number(env.OVH_SFTP_PORT || 22);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('OVH_SFTP_PORT must be between 1 and 65535.');
+  const hostKey = env.OVH_SFTP_HOST_KEY_SHA256?.trim().replace(/=+$/, '') || undefined;
+  if (hostKey && !/^SHA256:[A-Za-z0-9+/]{43}$/.test(hostKey)) throw new Error('OVH_SFTP_HOST_KEY_SHA256 must be an SSH SHA-256 fingerprint (SHA256:...).');
   if (remoteDir.includes('\\') || remoteDir.split('/').includes('..') || ['/', '.'].includes(posix.normalize(remoteDir))) {
-    throw new Error('OVH_FTP_REMOTE_DIR must name a website folder, not the account root or a parent directory.');
+    throw new Error('OVH_SFTP_REMOTE_DIR must name a website folder, not the account root or a parent directory.');
   }
-  return { host, port, user, password, secure: secure === 'true', remoteDir: posix.normalize(remoteDir) };
+  return { host, port, user, password, hostKey, remoteDir: posix.normalize(remoteDir) };
 }
 
 export async function inspectBuild(directory) {
@@ -49,49 +50,76 @@ export async function publishSite({ config, directory, client, checkOnly = false
   try {
     const files = await inspectBuild(directory);
     const { remoteDir, ...connection } = config;
-    log(`Connecting to ${config.host}:${config.port} using ${config.secure ? 'FTPS (TLS)' : 'FTP (unencrypted)'}.`);
+    log(`Connecting to ${config.host}:${config.port} using SFTP (SSH).`);
     await client.access(connection);
     const accountRoot = await client.pwd();
     // Require an existing site directory so a typo cannot create a new upload target.
     await client.cd(remoteDir);
     const destination = await client.pwd();
     if (posix.normalize(destination) === posix.normalize(accountRoot)) {
-      throw new Error('Refusing to publish into the account root. Set OVH_FTP_REMOTE_DIR to the website folder.');
+      throw new Error('Refusing to publish into the account root. Set OVH_SFTP_REMOTE_DIR to the website folder.');
     }
     await client.list();
     if (checkOnly) {
       log(`Connection and directory verified: ${destination}. ${files} files ready; nothing uploaded.`);
       return;
     }
-    log(`Uploading ${files} files from dist/ to ${destination}...`);
+    log(`Uploading ${files} files from ${directory} to ${destination}...`);
     // Uploads built files only, overwriting matching files without deleting other remote content.
     await client.uploadFromDir(directory);
     log(`Published ${files} files successfully.`);
   } finally {
-    client.close();
+    await client.close();
   }
 }
 
+export function createPublishPlan(sites, environmentForSite = loadPublishEnvironment) {
+  const plan = sites.map((site) => ({ site, config: getPublishConfig(environmentForSite(site), site), directory: resolve(projectRoot, site.output) }));
+  for (let i = 0; i < plan.length; i++) {
+    for (const previous of plan.slice(0, i)) {
+      const a = previous.config;
+      const b = plan[i].config;
+      if (a.host.toLowerCase() !== b.host.toLowerCase() || a.user !== b.user) continue;
+      const left = a.remoteDir.replace(/^\/+|\/+$/g, '');
+      const right = b.remoteDir.replace(/^\/+|\/+$/g, '');
+      if (left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`)) {
+        throw new Error(`Overlapping publish destinations for ${previous.site.id} and ${plan[i].site.id}. Set separate website folders.`);
+      }
+    }
+  }
+  return plan;
+}
+
 async function main() {
-  const args = process.argv.slice(2);
-  if (args.length > 1 || (args.length === 1 && !['--check', '--dry-run'].includes(args[0]))) {
-    throw new Error('Usage: npm run publish [-- --check | -- --dry-run]');
+  const { sites, values } = parseSiteArgs(process.argv.slice(2), {
+    check: { type: 'boolean' },
+    'dry-run': { type: 'boolean' },
+  });
+  if (values.check && values['dry-run']) throw new Error('Choose either --check or --dry-run.');
+  // Resolve every destination, build every selected site, and inspect every
+  // output before making the first connection. Never upload the parent dist/.
+  const plan = createPublishPlan(sites);
+  try {
+    await buildSites(sites);
+    for (const entry of plan) entry.files = await inspectBuild(entry.directory);
+    for (const { site, config, directory, files } of plan) {
+      if (values['dry-run']) {
+        console.log(`[${site.id}] Dry run: ${files} files from ${site.output}/ would be uploaded to ${config.host}:${config.port}/${config.remoteDir.replace(/^\//, '')} using SFTP (SSH). No connection made.`);
+      } else {
+        const log = (message) => console.log(`[${site.id}] ${message}`);
+        await publishSite({ config, directory, client: new SftpPublishClient({ log }), checkOnly: values.check, log });
+      }
+    }
+  } catch (error) {
+    // File-loaded credentials do not live in process.env; redact them too.
+    throw new Error(redactPublishError(error, plan.map(({ config }) => config.password)));
   }
-  const loaded = dotenv.config({ path: join(projectRoot, '.env'), quiet: true });
-  if (loaded.error && loaded.error.code !== 'ENOENT') throw loaded.error;
-  const config = getPublishConfig(process.env);
-  if (args[0] === '--dry-run') {
-    const files = await inspectBuild(outputDirectory);
-    console.log(`Dry run: ${files} files from dist/ would be uploaded to ${config.host}:${config.port}/${config.remoteDir.replace(/^\//, '')} using ${config.secure ? 'FTPS' : 'FTP (unencrypted)'}. No connection made.`);
-    return;
-  }
-  await publishSite({ config, directory: outputDirectory, client: new Client(30000), checkOnly: args[0] === '--check' });
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    const password = process.env.OVH_FTP_PASSWORD;
-    const message = password ? String(error.message).replaceAll(password, '[redacted]') : String(error.message);
+    const passwords = Object.entries(process.env).filter(([key]) => key.endsWith('OVH_SFTP_PASSWORD')).map(([, value]) => value);
+    const message = redactPublishError(error, passwords);
     console.error(`Publish failed: ${message}`);
     process.exitCode = 1;
   });

@@ -3,7 +3,7 @@ layout: layouts/base.njk
 ---
 <article class="container reading-column">
   <header class="article-header">
-    <a class="section-link" href="/blog/">← Cascada Blog</a>
+    <a class="section-link" href="/blog/">← {{ site.name | escape }} Blog</a>
     <h1>{{ title | escape }}</h1>
     <p class="article-meta"><time datetime="{{ page.date | isoDate }}">{{ page.date | readableDate }}</time><span aria-hidden="true"> · </span>{{ site.author }}<span aria-hidden="true"> · </span>{{ content | readingTime }} min read</p>
   </header>

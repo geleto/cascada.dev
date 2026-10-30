@@ -1,6 +1,6 @@
 // Run before the stylesheets so a saved preference applies before first paint.
 (() => {
-  const key = 'cascada-theme';
+  const key = document.documentElement.dataset.themeStorageKey || 'cascada-theme';
   const choices = ['light', 'dark', 'auto'];
   const root = document.documentElement;
   const system = window.matchMedia('(prefers-color-scheme: dark)');

@@ -65,7 +65,8 @@ web_modules/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variable files
+# dotenv files at any depth, including sites/<website>/.env
+# Keep the shared root example tracked (no credentials).
 .env
 .env.*
 !.env.example

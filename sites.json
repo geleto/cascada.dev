@@ -1,0 +1,26 @@
+{
+  "cascada.dev": {
+    "port": 3000,
+    "envPrefix": "CASCADA",
+    "documentation": {
+      "source": "../cascada",
+      "repository": "https://github.com/geleto/cascada",
+      "directory": "docs/cascada",
+      "documents": {
+        "script": { "file": "script.md", "url": "/cascada-script/" },
+        "template": { "file": "template.md", "url": "/cascada-template/" }
+      },
+      "linkAliases": {
+        "https://geleto.github.io/cascada-script": "/cascada-script/",
+        "https://geleto.github.io/posts/cascada-script-intro": "/posts/cascada-script-intro/",
+        "https://geleto.github.io/posts/cascada-kitchen-chef": "/posts/cascada-kitchen-chef/",
+        "https://geleto.github.io/posts/everything-everywhere-all-at-once": "/posts/everything-everywhere-all-at-once/",
+        "https://geleto.github.io/posts/implicit-async-programming": "/posts/implicit-async-programming/"
+      }
+    }
+  },
+  "casai.run": {
+    "port": 3001,
+    "envPrefix": "CASAI"
+  }
+}

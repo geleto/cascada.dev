@@ -4,7 +4,6 @@ import { createMarkdownRenderer } from './markdown.mjs';
 const markdown = createMarkdownRenderer();
 const escapeHtml = markdown.utils.escapeHtml;
 const plainText = (html) => markdown.utils.unescapeAll(html.replace(/<[^>]*>/g, ''));
-const routes = { script: '/cascada-script/', template: '/cascada-template/' };
 
 // Preserve the heading URLs from Cascada's original scripts/docs-gen.js.
 function slugifyHeading(value, counts) {
@@ -16,22 +15,25 @@ function slugifyHeading(value, counts) {
   return count === 0 ? base : `${base}-${count}`;
 }
 
-function localLink(href, revision) {
+function localLink(href, revision, options) {
   // These two source links retain punctuation that the original generator stripped.
   if (href === '#sequential-execution-with-' || href === '#repairing-sequential-paths-with-') return href.slice(0, -1);
-  const published = href.match(/^https:\/\/geleto\.github\.io\/cascada-script\/?([?#].*)?$/);
-  if (published) return routes.script + (published[1] || '');
-  const source = href.match(/^https:\/\/github\.com\/geleto\/cascada\/blob\/[^/]+\/docs\/cascada\/(script|template)\.md([?#].*)?$/);
-  if (source) return routes[source[1]] + (source[2] || '');
-  const download = href.match(/^https:\/\/raw\.githubusercontent\.com\/geleto\/cascada\/(?:refs\/heads\/)?[^/]+\/docs\/cascada\/(script|template)\.md$/);
-  if (download) return routes[download[1]] + 'README.md';
-  const post = href.match(/^https:\/\/geleto\.github\.io\/posts\/(cascada-script-intro|cascada-kitchen-chef|everything-everywhere-all-at-once|implicit-async-programming)\/?(#[^\s]*)?$/);
-  if (post) return `/posts/${post[1]}/${post[2] || ''}`;
+  const { repository, directory, documents = {}, linkAliases = {} } = options;
+  const [, path, suffix = ''] = href.match(/^([^?#]*)(.*)$/);
+  const alias = linkAliases[path.replace(/\/$/, '')];
+  if (alias) return alias + suffix;
+  const repositoryPath = repository?.replace('https://github.com/', '');
+  for (const document of Object.values(documents)) {
+    const source = path.startsWith(`${repository}/blob/`) && path.slice(`${repository}/blob/`.length).replace(/^[^/]+\//, '') === `${directory}/${document.file}`;
+    if (source) return document.url + suffix;
+    const rawPrefix = `https://raw.githubusercontent.com/${repositoryPath}/`;
+    const download = path.startsWith(rawPrefix) && path.slice(rawPrefix.length).replace(/^refs\/heads\//, '').replace(/^[^/]+\//, '') === `${directory}/${document.file}`;
+    if (download) return document.url + 'README.md' + suffix;
+    if (path.replace(/^\.\//, '') === document.file) return document.url + suffix;
+  }
   if (!href || /^[#/]|^[a-z][a-z\d+.-]*:/i.test(href)) return href;
-  const relative = href.match(/^(?:\.\/)?(script|template)\.md([?#].*)?$/);
-  if (relative) return routes[relative[1]] + (relative[2] || '');
-  const [, file, suffix = ''] = href.match(/^([^?#]*)(.*)$/);
-  return `https://github.com/geleto/cascada/blob/${revision}/${posix.normalize(posix.join('docs/cascada', file))}${suffix}`;
+  if (!repository || !directory) return href;
+  return `${repository}/blob/${revision}/${posix.normalize(posix.join(directory, path))}${suffix}`;
 }
 
 // The original generator's nested H2/H3 index, using the shared renderer's tokens.
@@ -58,7 +60,7 @@ function buildSidebar(headings) {
   return `${html}</ul>\n`;
 }
 
-export function renderDocumentation(source, revision = 'master') {
+export function renderDocumentation(source, revision = 'master', options = {}) {
   // The site layout supplies the title. All Cascada template syntax stays literal.
   const tokens = markdown.parse(source.replace(/^#\s+.+\r?\n/, ''), {});
   const headings = [];
@@ -73,8 +75,8 @@ export function renderDocumentation(source, revision = 'master') {
         text: plainText(markdown.renderer.renderInline(inline.children, markdown.options, {})) });
     }
     for (const child of token.children || []) {
-      if (child.type === 'link_open') child.attrSet('href', localLink(child.attrGet('href'), revision));
-      if (child.type === 'image') child.attrSet('src', localLink(child.attrGet('src'), revision));
+      if (child.type === 'link_open') child.attrSet('href', localLink(child.attrGet('href'), revision, options));
+      if (child.type === 'image') child.attrSet('src', localLink(child.attrGet('src'), revision, options));
     }
   }
   return { html: markdown.renderer.render(tokens, markdown.options, {}), index: buildSidebar(headings), headings };

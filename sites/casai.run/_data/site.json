@@ -1,0 +1,18 @@
+{
+  "name": "Casai",
+  "url": "https://casai.run",
+  "description": "AI agents and workflows powered by Cascada and the Vercel AI SDK.",
+  "author": "Angel Popov",
+  "themeColor": "#1b666b",
+  "themeStorageKey": "casai-theme",
+  "github": "https://github.com/geleto/casai",
+  "blog": false,
+  "navigation": [
+    { "title": "Documentation", "url": "/documentation/" },
+    { "title": "Cascada", "url": "https://cascada.dev" }
+  ],
+  "footerNavigation": [
+    { "title": "GitHub", "url": "https://github.com/geleto/casai" },
+    { "title": "Cascada", "url": "https://cascada.dev" }
+  ]
+}

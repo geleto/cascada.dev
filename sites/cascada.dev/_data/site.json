@@ -3,6 +3,16 @@
   "url": "https://cascada.dev",
   "description": "Concurrency-first scripting and templating for JavaScript and TypeScript. Write familiar, sequential logic. Cascada handles the concurrency.",
   "author": "Angel Popov",
+  "themeColor": "#b44742",
+  "themeStorageKey": "cascada-theme",
+  "github": "https://github.com/geleto/cascada",
+  "blog": true,
+  "blogDescription": "Ideas, tutorials, and architecture behind Cascada.",
+  "upcomingNavigation": ["Playground"],
+  "footerNavigation": [
+    { "title": "GitHub", "url": "https://github.com/geleto/cascada" },
+    { "title": "About", "url": "/about/" }
+  ],
   "navigation": [
     { "title": "Tutorial", "url": "/posts/cascada-script-intro/" },
     { "title": "Documentation", "url": "/documentation/" },
