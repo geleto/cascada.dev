@@ -161,7 +161,10 @@ unique `themeStorageKey` per site to identify each brand?s saved appearance pref
 keep separate storage because they have different origins. Cascada's
 existing `cascada-theme` preference is preserved.
 
-The shared brand mark masks `/logo.svg` with the current text color. A regular
+Both logos use `fill="currentColor"`, so inline SVGs follow the CSS `color` of
+their parent (or a `color` set directly on the SVG). The shared `.brand-mark`
+masks `/logo.svg` with the current text color; for example,
+`.brand-mark { color: #1b666b; }` recolors it without editing the asset. A regular
 `<img src="/logo.svg" width="32" height="32" alt="Casai">` can also be used,
 but an external SVG does not inherit the page's color. Keep an accessible name
 for a standalone logo and hide decorative marks beside equivalent text.
