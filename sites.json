@@ -21,6 +21,7 @@
   },
   "casai.run": {
     "port": 3001,
-    "envPrefix": "CASAI"
+    "envPrefix": "CASAI",
+    "config": "sites/casai.run/eleventy.config.mjs"
   }
 }

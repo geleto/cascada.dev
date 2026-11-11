@@ -7,7 +7,7 @@
   <meta name="theme-color" content="{{ site.themeColor | escape }}">
   <meta name="description" content="{{ (description or site.description) | escape }}">
   <title>{{ title | escape }}{% if not home %} | {{ site.name }}{% endif %}</title>
-  <link rel="canonical" href="{{ page.url | absoluteUrl(site.url) }}">
+  <link rel="canonical" href="{{ (canonicalPath or page.url) | absoluteUrl(site.url) }}">
   {% if site.blog %}<link rel="alternate" type="application/atom+xml" href="/feed.xml" title="{{ site.name | escape }} Blog">{% endif %}
   <meta property="og:title" content="{{ title | escape }}">
   <meta property="og:description" content="{{ (description or site.description) | escape }}">
@@ -21,6 +21,8 @@
   <link rel="stylesheet" href="/brand.css">
   {% if not home %}<link rel="stylesheet" href="/content.css">{% endif %}
   {% if documentation %}<link rel="stylesheet" href="/docs.css">{% endif %}
+  {% if quickReference %}<link rel="stylesheet" href="/quick-reference.css"><script type="module" src="/reference-assets/quick-reference.js"></script>{% endif %}
+  {% if matrixExportBase %}<link rel="alternate" type="text/markdown" href="{{ matrixExportBase }}README.md"><link rel="alternate" type="application/json" href="{{ matrixExportBase }}reference.json">{% endif %}
   <script src="/main.js" defer></script>
 </head>
 <body id="top">

@@ -39,7 +39,8 @@ dist/
 
 Cascada retains its existing public URLs. Casai currently has a minimal homepage
 and documentation links, using deep teal for its header, navy for the Why Casai section and footer,
-and the supplied Casai SVG logo. Its content can develop independently.
+and the supplied Casai SVG logo. Its content can develop independently. Its
+Documentation page includes the interactive component quick reference.
 
 ## Development and building
 
@@ -231,8 +232,8 @@ LinkedIn.
 
 Documentation tooling is shared; configuration and saved source/generated
 files belong to each site. Cascada imports the script and template references
-from the sibling Cascada checkout. Casai currently links to upstream references
-and has no imported documentation profile.
+from the sibling Cascada checkout. Casai's component matrix uses the separate
+package synchronization described below; its guides still link upstream.
 
 ```sh
 npm run docs:update
@@ -268,6 +269,85 @@ recorded GitHub commit. The sidebar contains static HTML and uses JavaScript to
 highlight the current section without moving keyboard focus. The index builder
 and legacy heading IDs are adapted from Cascada's `scripts/docs-gen.js`;
 licenses remain in `docs/licenses/`.
+
+## Casai quick reference
+
+Open `/documentation/quick-reference/` on Casai. The component index, Info,
+Example, and Config tabs share one selection. Source preparation, file loading,
+streaming, tool variants, and example features come from the matrix's control
+API. Config includes searchable properties, required settings, full types,
+defaults, overrides, inheritance, native amendments, methods, and nested union
+alternatives. Info includes supported sources, concepts, and result contracts.
+Examples retain every source file, with copy and download actions.
+
+Selections live in shareable URLs, including the selected tab and property
+anchors. Back/forward restores them; obsolete options are normalized by the
+upstream package. No settings are hidden merely because an example omits them.
+Planned Translator and available streaming translation stay distinct.
+
+### Data ownership and synchronization
+
+There are three layers:
+
+1. **Casai owns the contract and content.** `casai/docs/matrix` supplies the
+   dependency-free `@casai/matrix` modules: controls, transitions, reference forms,
+   descriptions, examples, types, and licenses. Fix content and selection rules
+   there. The website does not import the Casai runtime or execute model calls.
+2. **This repository saves a generated package snapshot.**
+   `sites/casai.run/docs/matrix/` is an exact LF-normalized copy, not a second
+   authored reference. `docs/matrix-source.json` records the Casai commit, local
+   modification status, and SHA-256 for every copied file. Commit both on sync.
+3. **The website owns presentation.** `sites/casai.run/reference/` contains the
+   renderer shared by static HTML and the browser, URL state, browser behavior,
+   and Eleventy integration. `public/quick-reference.css` supplies the responsive
+   layout using the existing light/dark theme. esbuild bundles the browser code;
+   generated bundle/export intermediates live only in `.cache/casai-reference/`.
+
+Casai's small `eleventy.config.mjs` extends the shared configuration and imports
+its reference builder. The registry's optional `config` field selects it for
+build/dev/publish. The builder compiles browser and static-rendering entries from
+the same snapshot. Its static bundle is keyed by content, so Node's module cache
+cannot retain old reference data during preview rebuilds. Casai watches these
+sources without making Cascada import or watch them.
+
+```sh
+# Refresh from the sibling casai checkout, including current local edits.
+npm run matrix:sync
+# Or select another checkout explicitly.
+npm run matrix:sync -- --source C:\Projects\casai
+# Verify both saved hashes and content against that checkout, without writing.
+npm run matrix:check
+# Build or preview the saved snapshot.
+npm run build -- casai.run
+npm run dev -- casai.run
+```
+
+Synchronization replaces only the saved matrix package. It never pulls, builds,
+or changes the Casai checkout. When changing its API/dependency snapshots, run
+Casai's `npm run docs:matrix` and `npm run test:matrix` first, then synchronize.
+Ordinary website install/build/dev/publish works without the Casai checkout and
+never silently refreshes it. CI can verify freshness with `matrix:check` when
+both repositories are available. Source links use the recorded commit; local
+changes are explicitly marked and identified by file hashes.
+
+### Static publishing and verification
+
+`referenceSelections()` in Casai enumerates canonical API forms. Eleventy builds
+one complete HTML page per form, plus `README.md` and `reference.json` at the
+same URL. `/documentation/quick-reference/forms/` lists every form, and
+`index.json` provides their URLs, selections, catalog, concepts, and versions.
+All readable sections and property anchors exist without JavaScript. Browser
+enhancement adds tabs and example controls; its exports include the complete
+current selection. SDK notices/licenses are distributed under `notices/`.
+
+Run `npm test` for both websites and all tests. For focused reference work, run
+`npm run build -- casai.run`, then
+`node --test tests/matrix.test.mjs tests/matrix-client.test.mjs`.
+The checks cover every published form and export, snapshot integrity, anchors,
+URL restoration, selection transitions, clipboard contents, tabs, search, and
+history. Interaction tests use an isolated JSDOM document; visual browser review
+remains a separate check. Stop the dev server before production builds/tests
+that write the same output directory.
 
 ## Adding another website
 

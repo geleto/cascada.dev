@@ -5,7 +5,7 @@ import { cleanSite } from './clean.mjs';
 import { parseSiteArgs, projectRoot } from './sites.mjs';
 
 export function eleventyProcess(site, args = []) {
-  return spawn(process.execPath, [resolve(projectRoot, 'node_modules/@11ty/eleventy/cmd.cjs'), ...args], {
+  return spawn(process.execPath, [resolve(projectRoot, 'node_modules/@11ty/eleventy/cmd.cjs'), ...(site.config ? [`--config=${site.config}`] : []), ...args], {
     cwd: projectRoot,
     env: { ...process.env, WEBSITE: site.id },
     stdio: 'inherit',
