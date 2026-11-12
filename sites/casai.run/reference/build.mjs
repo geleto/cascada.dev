@@ -43,11 +43,11 @@ export async function configureReference(eleventy, projectRoot) {
     const stem = resolve(cache, selection.id);
     // Export files are emitted separately, so Eleventy never interprets Markdown/code as templates.
     await writeFile(`${stem}.md`, renderer.toMarkdown(reference, example));
-    await writeFile(`${stem}.json`, JSON.stringify({ schemaVersion: 1, reference, example, provenance }, null, 2) + '\n');
+    await writeFile(`${stem}.json`, JSON.stringify({ schemaVersion: 3, reference, example, provenance }, null, 2) + '\n');
     eleventy.addPassthroughCopy({ [`${stem}.md`]: `${url.slice(1)}README.md`, [`${stem}.json`]: `${url.slice(1)}reference.json` });
     index.push({ ...selection, factory: reference.form.factory, status: reference.status, url, markdown: `${url}README.md`, json: `${url}reference.json` });
   }
   eleventy.addTemplate('matrix/forms.html', `<article class="ref-shell ref-forms"><a href="${basePath}">← Quick reference</a><h1>All API forms</h1><p>Every supported reference form, available without JavaScript.</p>${components.map(component => `<section><h2>${escape(component.name)}</h2><ul>${index.filter(entry => entry.component === component.name).map(entry => `<li><a href="${entry.url}">${escape(entry.factory || entry.component)}${entry.activeOptions.length ? ` · ${escape(entry.activeOptions.join(', '))}` : ''}</a>${entry.status === 'planned' ? ' (planned)' : ''} · <a href="${entry.markdown}">Markdown</a> · <a href="${entry.json}">JSON</a></li>`).join('')}</ul></section>`).join('')}</article>`, { layout: 'layouts/base.njk', title: 'All API forms', quickReference: true, permalink: `${basePath}forms/` });
-  await writeFile(resolve(cache, 'index.json'), JSON.stringify({ schemaVersion: 1, components, concepts, versions: referenceVersions, references: index, provenance }, null, 2) + '\n');
+  await writeFile(resolve(cache, 'index.json'), JSON.stringify({ schemaVersion: 3, components, concepts, versions: referenceVersions, references: index, provenance }, null, 2) + '\n');
   eleventy.addPassthroughCopy({ [resolve(cache, 'index.json')]: `${basePath.slice(1)}index.json` });
 }

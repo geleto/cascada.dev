@@ -1,4 +1,6 @@
 // Small progressive enhancements for navigation, examples, and contact links.
+import { tokenize } from './syntax.mjs';
+
 // Decode separate email parts in the browser; LinkedIn remains the static fallback.
 document.querySelectorAll('[data-email-user][data-email-domain]').forEach((placeholder) => {
   let address;
@@ -136,22 +138,18 @@ document.querySelectorAll('[data-code-source]').forEach((code) => {
 });
 
 // Highlight text nodes rather than parsing HTML or loading a third-party script.
-const tokens = /(?<comment>\/\/[^\n]*)|(?<string>"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`)|(?<delimiter>\{%|%\}|\{\{|\}\})|\b(?<keyword>function|endfunction|if|endif|return|for|endfor|each|endeach|var|data|in|of|is|error|const|new|async|await|type|export|import|as|from|set)\b|\b(?<number>\d+)\b|\b(?<function>[A-Za-z_$][\w$]*)(?=\()/g;
-
 document.querySelectorAll('pre code').forEach((code) => {
   const source = code.textContent;
   const fragment = document.createDocumentFragment();
-  let end = 0;
-  for (const match of source.matchAll(tokens)) {
-    fragment.append(document.createTextNode(source.slice(end, match.index)));
-    const token = document.createElement('span');
-    const type = Object.keys(match.groups).find((key) => match.groups[key] !== undefined);
-    token.className = `token-${type}`;
-    token.textContent = match[0];
+  const language = [...code.classList].find(name => name.startsWith('language-'))?.slice(9);
+  for (const { text, type } of tokenize(source, language)) {
+    const token = type ? document.createElement('span') : document.createTextNode(text);
+    if (type) {
+      token.className = `token-${type}`;
+      token.textContent = text;
+    }
     fragment.append(token);
-    end = match.index + match[0].length;
   }
-  fragment.append(document.createTextNode(source.slice(end)));
   code.replaceChildren(fragment);
 });
 

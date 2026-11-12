@@ -43,7 +43,7 @@ test('sites share components but isolate branding, content, feeds, and canonical
     const sitemap = read(site.id, 'sitemap.xml');
     for (const [, url] of sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)) assert.equal(new URL(url).origin, metadata.url);
     assert.ok(read(site.id, 'robots.txt').includes(`${metadata.url}/sitemap.xml`));
-    for (const asset of ['styles.css', 'main.js', 'content.css', 'docs.css', 'theme.js']) {
+    for (const asset of ['styles.css', 'main.js', 'syntax.mjs', 'content.css', 'docs.css', 'theme.js']) {
       assert.equal(read(site.id, asset), readFileSync(`shared/public/${asset}`, 'utf8'));
     }
     for (const forbidden of ['docs', 'sites.json', '.env', 'scripts', '_data', 'shared', 'sites']) {

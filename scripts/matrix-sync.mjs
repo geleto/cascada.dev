@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdir, readdir, readFile, writeFile, rename, rm } from 'node:fs/promises';
-import { resolve, relative, sep } from 'node:path';
+import { resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { projectRoot } from './sites.mjs';
 
@@ -43,25 +43,28 @@ if (values.check) {
     hashFormat: 'sha256 with LF line endings',
     files: hashes,
   };
-  // Stage the complete package first. Only this fixed snapshot directory is replaced.
-  const stage = `${destination}.next`;
-  const backup = `${destination}.previous`;
-  for (const path of [stage, backup]) {
-    if (!relative(resolve(projectRoot, 'sites/casai.run/docs'), path).startsWith(`matrix.`)) throw new Error('Invalid snapshot path.');
-    await rm(path, { recursive: true, force: true });
-  }
-  for (const [path, text] of Object.entries(files)) {
-    const target = resolve(stage, ...path.split('/'));
-    if (!target.startsWith(stage + sep)) throw new Error(`Invalid package path: ${path}`);
-    await mkdir(resolve(target, '..'), { recursive: true });
-    await writeFile(target, text);
-  }
-  let hadPrevious = false;
-  try { await rename(destination, backup); hadPrevious = true; }
+  // Keep the watched directory in place: Windows watchers hold its handle open.
+  // Replace each changed file atomically, then publish the matching manifest.
+  // An interrupted sync is detected by --check and can be rerun safely.
+  let snapshot = {};
+  try { snapshot = await readTree(destination); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
-  try { await rename(stage, destination); }
-  catch (error) { if (hadPrevious) await rename(backup, destination); throw error; }
+  const stage = resolve(projectRoot, '.cache/matrix-sync');
+  const within = (directory, path) => {
+    const target = resolve(directory, ...path.split('/'));
+    if (!target.startsWith(directory + sep)) throw new Error(`Invalid package path: ${path}`);
+    return target;
+  };
+  for (const [path, text] of Object.entries(files)) {
+    if (snapshot[path] === text) continue;
+    const temporary = within(stage, path);
+    const target = within(destination, path);
+    await mkdir(resolve(temporary, '..'), { recursive: true });
+    await mkdir(resolve(target, '..'), { recursive: true });
+    await writeFile(temporary, text);
+    await rename(temporary, target);
+  }
+  for (const path of Object.keys(snapshot)) if (!(path in files)) await rm(within(destination, path));
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
-  await rm(backup, { recursive: true, force: true });
   console.log(`Synchronized ${Object.keys(files).length} matrix files from ${source} (${manifest.commit.slice(0, 8)}${manifest.modified ? ', with local edits' : ''}).`);
 }

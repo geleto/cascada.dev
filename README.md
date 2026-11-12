@@ -272,17 +272,42 @@ licenses remain in `docs/licenses/`.
 
 ## Casai quick reference
 
-Open `/documentation/quick-reference/` on Casai. The component index, Info,
-Example, and Config tabs share one selection. Source preparation, file loading,
-streaming, tool variants, and example features come from the matrix's control
-API. Config includes searchable properties, required settings, full types,
-defaults, overrides, inheritance, native amendments, methods, and nested union
-alternatives. Info includes supported sources, concepts, and result contracts.
-Examples retain every source file, with copy and download actions.
+Open `/documentation/quick-reference/` on Casai. A two-column component picker
+sits above compact filters in the left column; the whole page scrolls together.
+The reader title shows the full `Component.modifiers({...})` call, followed
+by its description and compact Input and Return rows. Each row keeps its summary
+beside the label and expands only when more information is available. The input
+summary follows the selected source mode; the return summary follows the selected
+component variant. The file-loading checkbox comes before source toggles, then
+Behavior and other example choices. Text selects direct input where supported;
+intrinsic single-mode sources have no
+redundant selector. All choices and transitions come from the matrix's control
+API. The catalog's `kind` excludes concepts such as Context from the picker while
+preserving their reference pages and shared notes.
+Group titles use native fieldset legends in the border, with the file-loading
+checkbox beside the source title. The groups share the surrounding background.
+
+The right-hand tabs share that selection: **Example** retains every source file
+with accessible copy/download icons; **Config** starts with the main input property
+and context, followed by required settings, applicable configuration and methods.
+**Source modes** has its own tab when the component supports sources.
+**Return** appears only when the selected result has documented fields;
+simple return values remain in the info panel. Availability follows the result
+data, not a hardcoded component list. Keyboard navigation and URL restoration use
+the available tabs. A search icon opens a case-insensitive property-name filter;
+descriptions and types do not match, and unrelated overview blocks hide while searching.
+Property previews expand to show additional information; only documented defaults
+are displayed. **Notes** holds conceptual guidance. The Input and Return rows link
+to these details without duplicating the full property lists in the info panel.
+The picker remains two columns on small screens, above the reader. Without
+JavaScript, component links and the complete static reference remain usable.
 
 Selections live in shareable URLs, including the selected tab and property
 anchors. Back/forward restores them; obsolete options are normalized by the
-upstream package. No settings are hidden merely because an example omits them.
+upstream package. Legacy Info links open Notes; old Input & return tab links open
+Return when available, or the simple return summary otherwise. Existing property,
+result-member, and concept anchors stay valid. No settings
+are omitted merely because an example omits them.
 Planned Translator and available streaming translation stay distinct.
 
 ### Data ownership and synchronization
@@ -322,7 +347,10 @@ npm run build -- casai.run
 npm run dev -- casai.run
 ```
 
-Synchronization replaces only the saved matrix package. It never pulls, builds,
+Synchronization replaces only changed package files and removes obsolete files,
+keeping the watched directory in place so Windows previews can remain open.
+It writes the provenance manifest last; `matrix:check` detects an interrupted sync.
+Synchronization never pulls, builds,
 or changes the Casai checkout. When changing its API/dependency snapshots, run
 Casai's `npm run docs:matrix` and `npm run test:matrix` first, then synchronize.
 Ordinary website install/build/dev/publish works without the Casai checkout and
