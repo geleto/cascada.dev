@@ -92,13 +92,13 @@ test('URLs preserve examples, distinguish API forms, and normalize obsolete choi
   assert.notEqual(obsolete.options.includes('asTool'), obsolete.options.includes('asStream'));
 });
 
-test('renderer preserves planned status, nested alternatives and all resource files', async () => {
+test('renderer preserves work-in-progress notices, nested alternatives and all resource files', async () => {
   const renderer = createRenderer(provenance);
-  const planned = renderer.shell(describe('Translator'), await render('Translator'));
+  const planned = renderer.shell(describe('VideoGenerator'), await render('VideoGenerator'));
   const implemented = renderer.shell(describe('Translator', ['asStream']), await render('Translator', ['asStream']));
-  assert.match(planned, /Planned API/);
-  assert.match(implemented, /StreamingTranslator/);
-  assert.doesNotMatch(implemented, /Planned API: complete Translator/);
+  assert.match(planned, /Work in progress: VideoGenerator/);
+  assert.match(implemented.replaceAll('<wbr>', ''), /Translator\.asStream/);
+  assert.doesNotMatch(implemented, /Work in progress: Translator/);
   const reference = describe('LLMAgent', ['loadTemplate']);
   const example = await render('LLMAgent', ['loadTemplate']);
   const html = renderer.shell(reference, example);
@@ -110,7 +110,7 @@ test('renderer preserves planned status, nested alternatives and all resource fi
   for (const file of example.files) assert.ok(html.includes(file.name));
   assert.match(renderer.config(reference), /Alternative 1/);
   assert.match(renderer.toMarkdown(reference, example), new RegExp(`${provenance.commit}/README.md#`));
-  assert.equal(components.length, 14);
+  assert.equal(components.length, 16);
   const toolReference = describe('LLMAgent', ['asTool', 'loadTemplate']);
   assert.ok(renderer.heading(toolReference).replaceAll('<wbr>', '').includes('LLMAgent.loadsTemplate.asTool'));
   assert.ok(!renderer.heading(toolReference).includes('asTool.loadsTemplate'));

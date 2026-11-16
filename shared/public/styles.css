@@ -1,26 +1,4 @@
 :root {
-  color-scheme: light dark;
-  --brand: light-dark(#b44742, #873a36);
-  --accent: light-dark(#145b94, #7abaff);
-  --brand-deep: #173b5e;
-  --ink: light-dark(#242b2b, #e6edf3);
-  --heading: light-dark(#242b2b, #f3f6fa);
-  --muted: light-dark(#505b59, #aab6c5);
-  --light: light-dark(#edf0ed, #1b2430);
-  --line: light-dark(#dce3de, #354252);
-  --surface: light-dark(#fff, #131b25);
-  --code-background: light-dark(#e9ede9, #192330);
-  --code-ink: light-dark(#303a37, #dce7f1);
-  --code-caption: light-dark(#59655f, #adbacc);
-  --inline-code: light-dark(#873b37, #f0ac9e);
-  --inline-background: light-dark(#eee8e5, #342b2e);
-  --hover-background: light-dark(#e8ede8, #263446);
-  --focus: light-dark(#1768a0, #8cc9ff);
-  --token-keyword: light-dark(#b44742, #f0aaa6);
-  --token-comment: light-dark(#626e66, #9faec0);
-  --token-function: light-dark(#285f92, #9dccff);
-  --token-number: light-dark(#996019, #eec782);
-  --token-delimiter: var(--token-keyword);
   --header-expanded-height: 98px;
   --header-min-height: 44px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -28,8 +6,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
-:root[data-theme="light"] { color-scheme: light; }
-:root[data-theme="dark"] { color-scheme: dark; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-min-height) + 16px); }
 body { margin: 0; background: var(--surface); color: var(--ink); }
@@ -44,7 +20,7 @@ button { cursor: pointer; }
 /* Center capped content with inner gutters, as in Swift's feature sections. */
 .container { width: 100%; max-width: 980px; margin-inline: auto; padding-inline: 1em; }
 /* The outer spacing scrolls away; the inner row stays pinned at its minimum height. */
-.site-header { --header-shrink: 1; position: sticky; top: calc(var(--header-min-height) - var(--header-expanded-height)); z-index: 20; min-height: var(--header-expanded-height); display: flex; align-items: center; background: var(--brand); color: #fff; }
+.site-header { --header-shrink: 1; position: sticky; top: calc(var(--header-min-height) - var(--header-expanded-height)); z-index: 20; min-height: var(--header-expanded-height); display: flex; align-items: center; background: var(--brand); color: var(--on-brand); }
 .header-inner { position: sticky; top: 0; width: 100%; min-height: var(--header-min-height); padding-inline: clamp(16px, 2vw, 32px); display: flex; align-items: center; justify-content: space-between; gap: 32px; }
 .home-link { display: inline-flex; align-items: center; gap: calc(13px - 3px * var(--header-shrink)); padding-block: 5px; flex: 0 0 auto; text-decoration: none; }
 .brand-name { font-size: calc(24px - 4px * var(--header-shrink)); font-weight: 700; letter-spacing: -.025em; }
@@ -56,11 +32,11 @@ button { cursor: pointer; }
 .primary-nav > a:hover { text-decoration: underline; }
 .nav-upcoming { display: inline-flex; align-items: baseline; gap: 9px; }
 .coming-soon { font-size: 10px; font-weight: 400; letter-spacing: .02em; }
-.site-header :focus-visible { outline-color: #fff; }
+.site-header :focus-visible { outline-color: var(--on-brand); }
 .github-link { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 44px; border-radius: 4px; }
 .primary-nav > .github-link { padding: 0; }
 .github-link svg { display: block; }
-.github-link:hover { background: rgb(255 255 255 / 12%); }
+.github-link:hover { background: var(--on-brand-hover); }
 .menu-toggle { display: none; }
 .hero { padding-block: 64px 76px; }
 h1, h2, h3, h4, h5, h6 { color: var(--heading); }
@@ -72,7 +48,7 @@ h1 { margin: 0 0 18px; font-size: clamp(64px, 7.5vw, 96px); line-height: 1.08; l
 h2 { margin: 0 0 25px; font-size: clamp(30px, 3vw, 40px); line-height: 1.18; font-weight: 680; letter-spacing: -.036em; text-wrap: balance; }
 p { margin: 0 0 20px; }
 p:last-child { margin-bottom: 0; }
-.why { background: var(--brand-deep); color: #fff; padding-block: 54px 60px; }
+.why { background: var(--brand-deep); color: var(--on-brand); padding-block: 54px 60px; }
 .why h2 { color: inherit; font-size: 40px; margin-bottom: 25px; }
 .why-copy { font-size: 20px; line-height: 1.65; }
 strong { font-weight: 650; }
@@ -86,6 +62,11 @@ strong { font-weight: 650; }
 .feature-copy h2 { color: var(--heading); }
 .feature-copy strong { color: var(--ink); }
 .feature-copy .lead { color: var(--ink); font-size: 21px; line-height: 1.55; }
+.home-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 24px; margin-top: 28px; font-size: 16px; font-weight: 600; }
+.home-button { display: inline-flex; align-items: center; gap: 18px; padding: 12px 18px; border-radius: 4px; background: var(--accent); color: var(--surface); text-decoration: none; }
+.home-button:hover { text-decoration: underline; }
+#get-started .feature-copy > pre { margin-bottom: 24px; padding: 16px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+#get-started .feature-copy > pre code { padding: 0; background: none; color: var(--code-ink); font-size: 12px; }
 .workflow-explanation { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
 .workflow-steps { margin: 0; padding-left: 1.4em; }
 .workflow-steps li { margin-bottom: 20px; padding-left: .2em; }
@@ -120,13 +101,13 @@ pre { margin: 0; padding: 25px 23px 28px; overflow-x: auto; font-size: 13px; lin
 pre:focus-visible { outline-offset: -3px; }
 pre code { color: var(--code-ink); }
 .token-keyword { color: var(--token-keyword); }
-.token-string { color: var(--accent); }
+.token-string { color: var(--token-string); }
 .token-comment { color: var(--token-comment); font-style: italic; }
 .token-function { color: var(--token-function); }
 .token-number { color: var(--token-number); }
 .token-delimiter { color: var(--token-delimiter); }
 .animation-panel iframe { display: block; width: 100%; border: 0; background: var(--surface); color-scheme: inherit; }
-.site-footer { background: var(--brand-deep); color: #fff; padding-block: 36px; }
+.site-footer { background: var(--brand-deep); color: var(--on-brand); padding-block: 36px; }
 .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 30px; }
 .footer-brand { display: inline-flex; align-items: center; gap: 13px; color: inherit; font-size: 20px; font-weight: 700; text-decoration: none; }
 .footer-brand .brand-mark { width: 30px; height: 30px; }
@@ -134,7 +115,7 @@ pre code { color: var(--code-ink); }
 .site-footer nav { display: flex; align-items: center; gap: 28px; color: inherit; font-size: 14px; }
 .site-footer nav a { padding-block: 8px; text-decoration: none; white-space: nowrap; }
 .site-footer nav a:hover { text-decoration: underline; }
-.site-footer a:focus-visible { outline-color: #fff; }
+.site-footer a:focus-visible { outline-color: var(--on-brand); }
 .footer-appearance { display: flex; flex-shrink: 0; }
 .theme-switch { display: inline-flex; gap: 2px; min-width: 0; margin: 0; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 .theme-switch label { position: relative; cursor: pointer; }
@@ -173,7 +154,7 @@ pre code { color: var(--code-ink); }
   .home-link { padding-block: 6px; }
   .home-link .brand-mark { width: calc(44px - 16px * var(--header-shrink)); height: calc(44px - 16px * var(--header-shrink)); }
   .brand-name { font-size: calc(22px - 4px * var(--header-shrink)); }
-  .menu-toggle:not([hidden]) { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-left: auto; padding: 8px 0 8px 16px; color: #fff; background: none; border: 0; font-size: 15px; }
+  .menu-toggle:not([hidden]) { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-left: auto; padding: 8px 0 8px 16px; color: var(--on-brand); background: none; border: 0; font-size: 15px; }
   .menu-toggle span { font-size: 20px; }
   .primary-nav { position: relative; order: 1; flex: 0 0 100%; width: 100%; flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-start; gap: 0; margin-left: 0; padding-bottom: 18px; }
   .has-menu-toggle .primary-nav { position: absolute; top: 100%; left: 0; padding-inline: clamp(16px, 2vw, 32px); max-height: calc(100dvh - var(--header-expanded-height)); overflow-y: auto; overscroll-behavior: contain; background: var(--brand); }

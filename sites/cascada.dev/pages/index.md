@@ -1,5 +1,6 @@
 ---
 layout: layouts/base.njk
+templateEngineOverride: njk,md
 title: Cascada - Concurrency-first scripting and templating
 home: true
 ---
@@ -7,7 +8,7 @@ home: true
 <section class="hero" aria-labelledby="hero-title">
 <div class="container">
 
-# Cascada {#hero-title}
+# Cascada {id="hero-title"}
 
 **Concurrency-first scripting and templating<br class="desktop-break"> for JavaScript and TypeScript**
 {.tagline}
@@ -21,13 +22,13 @@ home: true
 <section class="why" aria-labelledby="why-title">
 <div class="container">
 
-## Why Cascada? {#why-title}
+## Why Cascada? {id="why-title"}
 
 <div class="why-copy">
 
 Modern applications often spend much of their time waiting - fetching pages, calling web APIs, waiting for AI models to respond, querying databases… Operations often take seconds, even minutes.
 
-Your code already says what depends on what. Cascada uses that information to run independent operations concurrently, waiting only for the results they need. **No `async`, no `await`, no juggling promises.**
+Your code already says what depends on what. Cascada follows these logical dependencies to run independent operations concurrently, waiting only for the results they need. **No `async`, no `await`, no juggling promises.**
 
 Orchestrate workflows with **[CascadaScript](/cascada-script/)**, a simple scripting language with familiar syntax, or generate prompts, HTML and other text with **[Cascada Template](/cascada-template/)**. Both run inside your existing JavaScript and TypeScript applications and AI agents.
 
@@ -39,7 +40,7 @@ Orchestrate workflows with **[CascadaScript](/cascada-script/)**, a simple scrip
 <div class="container feature-grid">
 <div class="feature-copy">
 
-## Intentionally simple {#simple-title}
+## Intentionally simple {id="simple-title"}
 
 Instantly familiar to JavaScript and Python developers.
 {.lead}
@@ -48,7 +49,7 @@ Variables, functions, conditionals, loops - the building blocks you already know
 
 </div>
 <figure class="code-panel">
-<figcaption><span>CascadaScript</span><button class="copy-button" type="button" aria-label="Copy greeting example" hidden>Copy</button></figcaption>
+<figcaption><span><a href="/cascada-script/">CascadaScript</a></span><button class="copy-button" type="button" aria-label="Copy greeting example" hidden>Copy</button></figcaption>
 
 ```cascada {tabindex="0" aria-label="Greeting example" data-language="cascada"}
 function greet(user)
@@ -71,50 +72,17 @@ endfor
 <div class="container feature-grid">
 <div class="feature-copy">
 
-## Everything that can run concurrently, does {#concurrent-title}
+## Everything that can run concurrently, does {id="concurrent-title"}
 
 Across statements, within expressions, inside function calls, at each loop iteration, across composed scripts…
 {.lead}
 
 Every operation starts as soon as its inputs are ready, waiting only when it actually depends on another result.
 
+**Streaming works the same way.** A regular `for` loop starts processing each item as it arrives. Independent iterations run concurrently and can finish in any order, while Cascada assembles their results in the stream's original order. Steps that need the complete result wait for it.
+
 </div>
-<figure class="code-panel">
-<figcaption><span>CascadaScript</span><button class="copy-button" type="button" aria-label="Copy concurrent workflow example" hidden>Copy</button></figcaption>
-
-```cascada {tabindex="0" aria-label="Concurrent product comparison example" id="headphones-code" data-language="cascada"}
-// Stream model names as strings
-var products = findProducts({
-  productName: "headphones",
-  count: 4
-}).elementStream
-
-data summaries = []
-
-// Start each model as it arrives.
-// Loop iterations run concurrently.
-for product in products
-  // Run all three fetches concurrently.
-  var specs = fetchSpecs(product)
-  var reviews = fetchReviews(product)
-  var price = fetchPrice(product)
-
-  // Wait only for this model's fetches.
-  var summary = summarizeProduct({
-    product: product,
-    specs: specs,
-    reviews: reviews,
-    price: price
-  }).text
-  // Append in the original search order.
-  summaries.push(summary)
-endfor
-
-// Wait for all summaries, then return.
-return summaries.snapshot()
-```
-
-</figure>
+{% codeExample "headphones.cas", "CascadaScript", "Concurrent product comparison example", "headphones-code" %}
 </div>
 </section>
 
@@ -122,7 +90,7 @@ return summaries.snapshot()
 <div class="container feature-grid">
 <div class="feature-copy">
 
-## Concurrent execution<br> Sequential results {#results-title}
+## Concurrent execution<br> Sequential results {id="results-title"}
 
 Operations can run and finish out of order, but Cascada guarantees that their outputs are assembled exactly as if the script had run sequentially.
 
@@ -132,7 +100,7 @@ Operations can run and finish out of order, but Cascada guarantees that their ou
 
 The example demonstrates concurrency in three steps:
 
-1. ### Find the top 4 headphones, streaming each result
+1. ### Find 4 headphones, streaming each result
 
    Processing starts as soon as the search returns a headphone model, while the search continues.
 
@@ -158,42 +126,7 @@ The example demonstrates concurrency in three steps:
 </figure>
 </div>
 <div id="code-panel" class="example-tabpanel" role="tabpanel" aria-labelledby="code-tab" tabindex="0" hidden>
-<figure class="code-panel">
-<figcaption><span>CascadaScript</span><button class="copy-button" type="button" aria-label="Copy headphones workflow example" hidden>Copy</button></figcaption>
-
-```cascada {tabindex="0" aria-label="Headphones workflow code" data-language="cascada" data-code-source="headphones-code"}
-// Stream model names as strings
-var products = findProducts({
-  productName: "headphones",
-  count: 4
-}).elementStream
-
-data summaries = []
-
-// Start each model as it arrives.
-// Loop iterations run concurrently.
-for product in products
-  // Run all three fetches concurrently.
-  var specs = fetchSpecs(product)
-  var reviews = fetchReviews(product)
-  var price = fetchPrice(product)
-
-  // Wait only for this model's fetches.
-  var summary = summarizeProduct({
-    product: product,
-    specs: specs,
-    reviews: reviews,
-    price: price
-  }).text
-  // Append in the original search order.
-  summaries.push(summary)
-endfor
-
-// Wait for all summaries, then return.
-return summaries.snapshot()
-```
-
-</figure>
+{% codeExample "headphones.cas", "CascadaScript", "Headphones workflow code" %}
 </div>
 </div>
 </div>
@@ -203,7 +136,7 @@ return summaries.snapshot()
 <div class="container feature-grid">
 <div class="feature-copy">
 
-## Errors flow like data {#errors-title}
+## Errors flow like data {id="errors-title"}
 
 Errors don’t stop execution. They *poison* all variables that depend on them, while independent work continues unaffected.
 {.lead}
@@ -212,7 +145,7 @@ Errors don’t stop execution. They *poison* all variables that depend on them, 
 
 </div>
 <figure class="code-panel">
-<figcaption><span>CascadaScript</span><button class="copy-button" type="button" aria-label="Copy error recovery example" hidden>Copy</button></figcaption>
+<figcaption><span><a href="/cascada-script/">CascadaScript</a></span><button class="copy-button" type="button" aria-label="Copy error recovery example" hidden>Copy</button></figcaption>
 
 ```cascada {tabindex="0" aria-label="Error recovery example" data-language="cascada"}
 var user = getUser()
@@ -233,7 +166,7 @@ endif
 <div class="container feature-grid">
 <div class="feature-copy">
 
-## Sequential by exception {#sequential-title}
+## Sequential by exception {id="sequential-title"}
 
 Concurrency is the default, but sometimes order matters.
 {.lead}
@@ -245,7 +178,7 @@ Concurrency is the default, but sometimes order matters.
 
 </div>
 <figure class="code-panel">
-<figcaption><span>CascadaScript</span><button class="copy-button" type="button" aria-label="Copy sequential execution example" hidden>Copy</button></figcaption>
+<figcaption><span><a href="/cascada-script/">CascadaScript</a></span><button class="copy-button" type="button" aria-label="Copy sequential execution example" hidden>Copy</button></figcaption>
 
 ```cascada {tabindex="0" aria-label="Sequential execution example" data-language="cascada"}
 // Mark the call side-effect with !
@@ -272,13 +205,13 @@ endfor
 <div class="container feature-grid">
 <div class="feature-copy">
 
-## Built for JavaScript<br> and TypeScript {#javascript-title}
+## Built for JavaScript<br> and TypeScript {id="javascript-title"}
 
 Cascada works inside your existing applications, not as a replacement for JavaScript or TypeScript.
 
 Use your existing functions, libraries, APIs, and services directly in [CascadaScript](/cascada-script/). Organize complex workflows into reusable functions and scripts, then import and compose them into larger workflows.
 
-**Concurrency works across the entire composition**, automatically managing dependencies between operations, functions, and scripts.
+**Concurrency works across the entire composition**, automatically following the logical dependencies between operations, functions and scripts.
 
 </div>
 <figure class="code-panel">
@@ -313,15 +246,16 @@ const result = await env.renderScriptString(`
 <div class="container feature-grid">
 <div class="feature-copy">
 
-## Templates that<br> run concurrently {#templates-title}
+## Templates that<br> run concurrently {id="templates-title"}
 
 **[Cascada Template](/cascada-template/)** brings the same engine to templates, using the popular Nunjucks syntax. Create AI prompts, HTML, emails, and more using familiar expressions, macros, conditionals, and loops.
 
 Just like [CascadaScript](/cascada-script/), **everything that can run concurrently, does** - even inside templates. Independent operations run in parallel, while the final output is assembled in the order you wrote it.
 
 </div>
+{% raw %}
 <figure class="code-panel">
-<figcaption><span>Cascada Template</span><button class="copy-button" type="button" aria-label="Copy template example" hidden>Copy</button></figcaption>
+<figcaption><span><a href="/cascada-template/">Cascada Template</a></span><button class="copy-button" type="button" aria-label="Copy template example" hidden>Copy</button></figcaption>
 
 ```template {tabindex="0" aria-label="Research brief template example" data-language="template"}
 Write a research brief on {{ topic }}:
@@ -333,24 +267,25 @@ Write a research brief on {{ topic }}:
 ```
 
 </figure>
+{% endraw %}
 </div>
 </section>
 <section id="casai" class="feature feature-tinted feature-reversed" aria-labelledby="casai-title">
 <div class="container feature-grid">
 <div class="feature-copy">
 
-## Casai - Cascada for AI workflows {#casai-title}
+## Casai - Cascada for AI workflows {id="casai-title"}
 
-Build AI agents and workflows with [Casai](https://github.com/geleto/casai), a TypeScript library built on Cascada and the Vercel AI SDK, with all of Cascada’s concurrency features.
+Build AI agents and workflows with [Casai](https://casai.run), a TypeScript library built on Cascada and the [Vercel AI SDK](https://ai-sdk.dev/docs/introduction), with all of Cascada’s concurrency features.
 {.lead}
 
 Compose model calls, tools, and structured outputs into reusable components. Define your workflows in [CascadaScript](/cascada-script/) and your prompts in [Cascada templates](/cascada-template/).
 
-The same headphones example shown above, now with [Casai](https://github.com/geleto/casai) components. Explore the components, orchestration code, and workflow in motion.
+The same headphones example shown above, now with [Casai](https://casai.run) components. Explore the components, orchestration code, and workflow in motion.
 
-The components stream headphone models, fetch specs, reviews, and prices from your product APIs, and generate a summary for each model.
+One agent streams headphone suggestions. Your product APIs fetch specs, reviews and prices, and another agent summarizes each model. Shared configuration gives both agents the same model.
 
-[Explore Casai <span aria-hidden="true">→</span>](https://github.com/geleto/casai)
+[Explore Casai <span aria-hidden="true">→</span>](https://casai.run)
 
 </div>
 <div class="example-tabs casai-examples">
@@ -360,93 +295,10 @@ The components stream headphone models, fetch specs, reviews, and prices from yo
 <button id="casai-workflow-tab" class="example-tab" type="button" role="tab" aria-controls="casai-workflow-panel" aria-selected="false" tabindex="-1">Workflow</button>
 </div>
 <div id="casai-components-panel" class="example-tabpanel" role="tabpanel" aria-labelledby="casai-components-tab" tabindex="0">
-<figure class="code-panel">
-<figcaption><span>JavaScript · components.js</span><button class="copy-button" type="button" aria-label="Copy Casai components example" hidden>Copy</button></figcaption>
-
-```javascript {tabindex="0" aria-label="Casai components example" id="casai-components-code" data-language="javascript"}
-import {
-  create, FileSystemLoader, z
-} from 'casai';
-import { openai } from '@ai-sdk/openai';
-// Your product API integration.
-import { productApi } from './product-api';
-
-// Build the AI prompt with a template.
-const summarizeProduct =
-  create.TextGenerator.withTemplate({
-    model: openai('gpt-4o-mini'),
-    inputSchema: z.object({
-      product: z.string(),
-      specs: z.record(
-        z.string(), z.string()
-      ),
-      reviews: z.array(z.string()),
-      price: z.number().nonnegative()
-    }),
-    prompt: `Summarize this headphone.
-      Use only the supplied information.
-      Model: {{ product }}
-      Specs: {{ specs | dump }}
-      Reviews: {{ reviews | dump }}
-      Price: {{ price | dump }}`
-  });
-
-// Load the Orchestration tab's script
-// from headphones.csc in this folder.
-const compare = create.Script.loadsScript({
-  loader: new FileSystemLoader('./'),
-  script: 'headphones.csc',
-  context: {
-    findProducts: productApi.findProducts,
-    fetchSpecs: productApi.fetchSpecs,
-    fetchReviews: productApi.fetchReviews,
-    fetchPrice: productApi.fetchPrice,
-    summarizeProduct
-  }
-});
-
-const summaries = await compare();
-```
-
-</figure>
+{% codeExample "headphones.ts", "TypeScript · headphones.ts", "Casai components example", "casai-components-code" %}
 </div>
 <div id="casai-orchestration-panel" class="example-tabpanel" role="tabpanel" aria-labelledby="casai-orchestration-tab" tabindex="0" hidden>
-<figure class="code-panel">
-<figcaption><span>CascadaScript · headphones.csc</span><button class="copy-button" type="button" aria-label="Copy Casai orchestration example" hidden>Copy</button></figcaption>
-
-```cascada {tabindex="0" aria-label="Casai orchestration example" data-language="cascada" data-code-source="headphones-code"}
-// Stream model names as strings
-var products = findProducts({
-  productName: "headphones",
-  count: 4
-}).elementStream
-
-data summaries = []
-
-// Start each model as it arrives.
-// Loop iterations run concurrently.
-for product in products
-  // Run all three fetches concurrently.
-  var specs = fetchSpecs(product)
-  var reviews = fetchReviews(product)
-  var price = fetchPrice(product)
-
-  // Wait only for this model's fetches.
-  var summary = summarizeProduct({
-    product: product,
-    specs: specs,
-    reviews: reviews,
-    price: price
-  }).text
-  // Append in the original search order.
-  summaries.push(summary)
-endfor
-
-// Wait for all summaries, then return.
-return summaries.snapshot()
-```
-
-</figure>
+{% codeExample "headphones.cas", "CascadaScript · headphones.cas", "Casai orchestration example" %}
 </div>
 <div id="casai-workflow-panel" class="example-tabpanel" role="tabpanel" aria-labelledby="casai-workflow-tab" tabindex="0" hidden>
 <figure class="animation-panel">
@@ -454,5 +306,31 @@ return summaries.snapshot()
 </figure>
 </div>
 </div>
+</div>
+</section>
+
+<section id="get-started" class="feature" aria-labelledby="start-title">
+<div class="container feature-grid">
+<div class="feature-copy">
+
+## Build your first workflow. {id="start-title"}
+
+Start with a script and the functions you already use.
+{.lead}
+
+Install Cascada, then pass your functions and data to a script.
+
+```sh {tabindex="0" aria-label="Install Cascada"}
+npm install cascada-engine
+```
+
+Fetch a user's profile and posts concurrently, then combine the results. This example uses [JSONPlaceholder](https://jsonplaceholder.typicode.com/), a public demo API. Replace the helper with your own API calls when you're ready.
+
+<div class="home-actions"><a class="home-button" href="/cascada-script/">Explore CascadaScript <span aria-hidden="true">→</span></a><a href="https://github.com/geleto/cascada">View on GitHub <span aria-hidden="true">↗</span></a></div>
+
+</div>
+
+{% codeExample "cascada-start.ts", "TypeScript · your first workflow", "Cascada getting started example", "cascada-start-code" %}
+
 </div>
 </section>

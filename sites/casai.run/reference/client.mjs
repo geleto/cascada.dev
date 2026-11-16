@@ -3,6 +3,7 @@ import { describe } from '../docs/matrix/reference.js';
 import provenance from '../docs/matrix-source.json';
 import { createRenderer, icons } from './render.mjs';
 import { restoreSelection, selectionUrl, referencePath } from './state.mjs';
+import { createExampleActions } from './example-actions.mjs';
 
 const root = document.querySelector('[data-matrix]');
 if (root) initialize();
@@ -111,34 +112,7 @@ function initialize() {
     const message = cleared.length ? `Updated example. Cleared: ${cleared.map(id => names.find(choice => choice.id === id).name).join(', ')}.` : 'Example and reference updated.';
     update({ focus, message });
   }
-  function download(text, name, mime = 'text/plain') {
-    const url = URL.createObjectURL(new Blob([text], { type: mime }));
-    const a = document.createElement('a');
-    a.href = url; a.download = name; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    announce(`Downloaded ${name}.`);
-  }
-  const copyTimers = new WeakMap();
-  async function copyCode(text, button, code) {
-    try {
-      await navigator.clipboard.writeText(text);
-      clearTimeout(copyTimers.get(button));
-      button.innerHTML = icons.copied;
-      button.classList.add('is-copied');
-      button.title = 'Copied';
-      copyTimers.set(button, setTimeout(() => {
-        button.innerHTML = icons.copy;
-        button.classList.remove('is-copied');
-        button.title = button.getAttribute('aria-label') || 'Copy code';
-      }, 1800));
-      announce('Code copied.');
-    } catch {
-      const range = document.createRange(); range.selectNodeContents(code);
-      const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
-      code.closest('pre').focus();
-      announce('Clipboard is unavailable. Code selected for manual copying.');
-    }
-  }
+  const { copyCode, download } = createExampleActions(announce);
 
   root.addEventListener('click', event => {
     const target = event.target.closest('a, button');

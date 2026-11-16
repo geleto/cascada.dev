@@ -1,5 +1,1 @@
-:root {
-  --brand: light-dark(#b44742, #873a36);
-  --accent: light-dark(#145b94, #7abaff);
-  --brand-deep: #173b5e;
-}
+/* Site-specific layout styles go here. All colors are in shared/public/colors.css. */

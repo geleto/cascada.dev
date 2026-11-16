@@ -1,11 +1,31 @@
 // These helpers generate source text; they never execute a displayed example.
 export const has = (options, name) => options.includes(name);
-export const sourceModes = ['withText', 'withTemplate', 'withScript', 'withFunction', 'loadText', 'loadTemplate', 'loadScript'];
+export const sourceModes = ['withAudio', 'withText', 'withTemplate', 'withScript', 'withFunction', 'loadText', 'loadTemplate', 'loadScript', 'loadAudio'];
 export const sourceMode = options => sourceModes.find(name => has(options, name));
 export const sourceKind = options => sourceMode(options)?.includes('Template') ? 'cat' : sourceMode(options)?.includes('Script') ? 'cas' : has(options, 'loadText') ? 'txt' : undefined;
-export const prepared = options => Boolean(sourceMode(options)) && !has(options, 'loadText') && !has(options, 'withText');
-export const literal = value => JSON.stringify(value);
+export const prepared = options => Boolean(sourceMode(options)) && !['loadText', 'withText', 'withAudio', 'loadAudio'].some(mode => has(options, mode));
 export const indent = (text, spaces = 2) => text.split('\n').map(line => line ? ' '.repeat(spaces) + line : '').join('\n');
+
+// Keep long strings readable without changing their whitespace or escape sequences.
+export function literal(value) {
+  if (typeof value !== 'string') return JSON.stringify(value);
+  const parts = [];
+  let part = '';
+  for (const word of value.split(/(?<=\s)/u)) {
+    if (part && (JSON.stringify(part + word).length > 60 || part.endsWith('\n'))) {
+      parts.push(JSON.stringify(part));
+      part = '';
+    }
+    part += word;
+  }
+  parts.push(JSON.stringify(part));
+  return parts.length === 1 ? parts[0] : `(\n${indent(parts.join(' +\n'))}\n)`;
+}
+
+export function invoke(name, args) {
+  const compact = `${name}(${args})`;
+  return compact.length <= 52 && !compact.includes('\n') ? compact : `${name}(\n${indent(args)}\n)`;
+}
 
 // Escape the *generated* JavaScript literal, not the Cascada source inside it.
 export function multiline(value) {
@@ -25,6 +45,7 @@ export function factory(component, options) {
 
 export function source(component, field, options, resources, plain, fn, defaultKind) {
   const mode = sourceMode(options);
+  if (mode === 'loadAudio') return { fields: plain === undefined ? [] : [`${field}: ${plain},`], files: [], loaded: false };
   const kind = sourceKind(options) ?? defaultKind;
   if (mode === 'withFunction') return { fields: [`${field}: ${fn},`], files: [], loaded: false };
   if (!kind) return { fields: plain === undefined ? [] : [`${field}: ${plain},`], files: [], loaded: false };
@@ -54,9 +75,11 @@ const ${name} = Function.asTool({
   description: ${literal(description)},
   inputSchema: z.object({}),
   schema: ${schema},
-  execute: () => ${value},
+  execute: () =>
+${indent(value, 4)},
 });` : `// Replace this sample lookup with your application service.
-const ${name} = async () => ${value};`,
+const ${name} = async () =>
+${indent(value)};`,
     context: enabled ? [] : [name],
     fields: enabled ? [`tools: { ${name} },`] : [],
     imports: enabled ? ['Function', 'z'] : [],
@@ -71,7 +94,9 @@ export function toolUse(variable, args, kind, prompt) {
   if (kind === 'script') return `// Call the tool from a workflow and keep its native application result.
 const workflow = Script({
   tools: { ${variable} },
-  context: { arguments: ${args} },
+  context: {
+    arguments: ${indent(args, 4).trimStart()},
+  },
   script: 'return ${variable}(arguments)',
 });
 return await workflow();`;
@@ -82,24 +107,20 @@ const assistant = LLMAgent({
   tools: { ${variable} },
   stopWhen: isStepCount(3),
 });
-const answer = await assistant(${prompt});
+const answer = await ${invoke('assistant', prompt)};
 return {
   text: answer.output,
   toolResults: answer.steps.flatMap(step => step.toolResults),
 };`;
 }
 
-export function renderExample({ component, options, variable, functionName, params = [], modelType, streamingFactory,
+export function renderExample({ component, options, variable, functionName, params = [], modelType,
   imports = [], setup = [], fields = [], source: input = { fields: [], files: [] },
   description, toolDescription, schema, toolArgs = '{}', toolCaller = 'agent', toolPrompt,
   call = `${variable}()`, named = '{}', result = 'return result;', body, typeImports = [], aiImports = [] }) {
   const asTool = has(options, 'asTool');
   if (asTool && !toolDescription) throw new Error(`Supply a model-facing toolDescription for ${component}`);
-  // Keep one matrix family while the current audio API has separate factories.
-  const separateStream = has(options, 'asStream') && streamingFactory;
-  const api = separateStream || component;
-  const modifiers = separateStream ? options.filter(id => id !== 'asStream') : options;
-  const casai = new Set([api, ...imports]);
+  const casai = new Set([component, ...imports]);
   const types = new Set(typeImports);
   const ai = new Set(aiImports);
   const parameters = [];
@@ -116,7 +137,9 @@ export function renderExample({ component, options, variable, functionName, para
   if (schema) casai.add('z');
   if (input.loaded) casai.add('FileSystemLoader');
   if (has(options, 'useTools') && component === 'LLMAgent') ai.add('isStepCount');
-  const importLines = [`import { ${[...casai].sort().join(', ')} } from 'casai';`];
+  const names = [...casai].sort().join(', ');
+  const casaiImport = `import { ${names} } from 'casai';`;
+  const importLines = [casaiImport.length <= 80 ? casaiImport : `import {\n${indent(names)}\n} from 'casai';`];
   if (types.size) importLines.push(`import type { ${[...types].sort().join(', ')} } from 'ai';`);
   if (ai.size) importLines.push(`import { ${[...ai].sort().join(', ')} } from 'ai';`);
   if (input.loaded) importLines.push("import { fileURLToPath } from 'node:url';");
@@ -125,13 +148,16 @@ export function renderExample({ component, options, variable, functionName, para
     ...(asTool ? [`description: ${literal(toolDescription)},`] : []),
     ...(schema ? [`inputSchema: ${schema},`] : []), ...input.fields,
   ];
-  const declaration = `const ${variable} = ${factory(api, modifiers)}({\n${indent(config.join('\n'))}\n});`;
+  const declaration = `const ${variable} = ${factory(component, options)}({\n${indent(config.join('\n'))}\n});`;
   const invocation = body ?? (asTool && !has(options, 'run') ? toolUse(variable, toolArgs, toolCaller, toolPrompt)
-    : `const result = await ${has(options, 'run') ? `${variable}.run(${asTool ? `{ context: ${toolArgs} }` : named})` : call};\n${result}`);
-  let code = `${importLines.join('\n')}\n\n// ${description}\nexport async function ${functionName}(${parameters.join(', ')}) {\n${indent([...setup, declaration, invocation].filter(Boolean).join('\n\n'))}\n}\n`;
+    : `const result = await ${has(options, 'run') ? invoke(`${variable}.run`, asTool ? `{ context: ${toolArgs} }` : named) : call};\n${result}`);
+  const signature = `export async function ${functionName}(${parameters.join(', ')}) {`;
+  const heading = signature.length <= 80 && !signature.includes('\n') ? signature
+    : `export async function ${functionName}(\n${indent(parameters.join(',\n'))},\n) {`;
+  let code = `${importLines.join('\n')}\n\n// ${description}\n${heading}\n${indent([...setup, declaration, invocation].filter(Boolean).join('\n\n'))}\n}\n`;
   if (input.inlineText !== undefined) code = code.replace('__MATRIX_SOURCE__', () => multiline(input.inlineText));
   return { id: exampleId(component, options),
-    configuration: { component, factory: factory(api, modifiers), variable,
+    configuration: { component, factory: factory(component, options), variable,
       properties: config.flatMap(field => field.match(/^([\w$]+)\s*(?=[:,])/)?.slice(1) ?? []) },
     files: [{ name: `${component}.ts`, language: 'typescript', code }, ...input.files] };
 }

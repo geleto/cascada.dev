@@ -1,36 +1,19 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-demo="headphones-workflow">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Cascada · Streaming product comparisons</title>
+  <title>Streaming product comparisons · Cascada and Casai</title>
   <script>
     if (window.parent !== window && new URLSearchParams(window.location.search).get('embedded') === '1') {
       document.documentElement.classList.add('is-embedded');
     }
   </script>
   <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/colors.css">
   <style>
     :root {
-      color-scheme: light dark;
-      --ink: light-dark(#151b29, #f0f2f6);
-      --heading: light-dark(#151b29, #f3f6fa);
-      --secondary: light-dark(#576172, #abb4c3);
-      --quiet: light-dark(#7a8492, #828c9d);
-      --rule: light-dark(#d9dee7, #3a4556);
-      --hairline: light-dark(#e9edf2, #303a49);
-      --surface: light-dark(#ffffff, #131b25);
-      --track: light-dark(#e7ebf0, #303b4b);
-      --pending-disc: light-dark(#aab3c1, #667386);
-      --hover: light-dark(#f4f6f9, #273244);
-      --scrub: light-dark(#1c385b, #88afe5);
-      --focus: light-dark(#1859c9, #8cc9ff);
-      --headphone-ink: light-dark(#ffffff, #131b25);
-      --product-1: light-dark(#164a9b, #5a95ed);
-      --product-2: light-dark(#b44742, #df807b);
-      --product-3: light-dark(#173b5e, #60acc8);
-      --product-4: light-dark(#C98800, #e6b44c);
       --token: 37px;
       --process-token: 32px;
       --result-token: 37px;
@@ -38,8 +21,6 @@
       --row-gap: 11px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    :root[data-theme="light"] { color-scheme: light; }
-    :root[data-theme="dark"] { color-scheme: dark; }
     * { box-sizing: border-box; }
     html { background: var(--surface); }
     body { margin: 0; color: var(--ink); background: var(--surface); font-family: inherit; -webkit-font-smoothing: antialiased; }
@@ -132,10 +113,10 @@
   </style>
 </head>
 <body>
-  <main id="pipeline" class="pipeline" aria-label="Cascada concurrent product comparison demonstration">
+  <main id="pipeline" class="pipeline" aria-label="Concurrent product comparison demonstration">
     <section class="stage stage-generate" aria-labelledby="generate-title">
       <div class="stage-head">
-        <h2 class="stage-title" id="generate-title">Find the top 4 headphones, streaming each result</h2>
+        <h2 class="stage-title" id="generate-title">Find 4 headphones, streaming each result</h2>
       </div>
       <div class="slot-grid" id="generate-grid"></div>
       <div class="generation-track" id="generation-progress" role="progressbar" aria-label="Headphone generation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">

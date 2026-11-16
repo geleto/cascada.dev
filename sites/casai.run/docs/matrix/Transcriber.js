@@ -1,22 +1,25 @@
 import { has, prepared, source, lookup, contextField, renderExample, audioStreamSetup, consumeAudio } from './shared.js';
 
 export default function render(options, resources) {
-  const coded = prepared(options), streaming = has(options, 'asStream');
-  const audio = streaming ? 'openRecording()' : 'recordingUrl';
+  const coded = prepared(options), streaming = has(options, 'asStream'), loaded = has(options, 'loadAudio');
+  const raw = streaming || has(options, 'audioStream') || loaded;
+  const urlTool = has(options, 'asTool') && !coded && !raw;
+  const configuredTool = has(options, 'asTool') && !coded && !urlTool;
+  const audio = loaded || urlTool ? 'recordingUrl' : raw ? 'openRecording()' : 'recording';
   const tool = lookup(options, { name: 'findRecording', description: 'Find the available delivery recording.', value: "'delivery-note'" });
   return renderExample({ component: 'Transcriber', variable: 'transcribeNote', functionName: 'transcribeDeliveryNote', options, modelType: 'TranscriptionModel',
-    streamingFactory: 'StreamingTranscriber',
-    params: [streaming ? 'pcm24k: Uint8Array' : 'recordingUrl: URL'], description: 'Transcribe the same delivery note. Use complete mode for whole audio files.', imports: coded ? tool.imports : [],
-    toolDescription: coded ? 'Transcribe the available delivery-note recording.' : 'Transcribe a delivery-note recording from its audio URL.',
-    setup: [...(streaming ? [audioStreamSetup] : []), ...(coded ? [tool.setup,
-      `const recordings = { 'delivery-note': ${streaming ? 'openRecording' : '() => recordingUrl'} };`,
-      'const getRecording = (id: string) => recordings[id as keyof typeof recordings]();'] : [])],
-    fields: [...(streaming ? ["inputAudioFormat: { type: 'audio/pcm', rate: 24000 },"] : []), ...(coded ? [...contextField(['getRecording', ...tool.context]), ...tool.fields] : [])],
-    schema: coded ? 'z.object({})' : has(options, 'asTool') ? 'z.object({ audio: z.url().transform(value => new URL(value)) })' : undefined,
-    source: source('Transcriber', 'audio', options, resources, undefined,
-      'async ({ findRecording, getRecording }) => getRecording(await findRecording())'),
-    call: coded ? 'transcribeNote({})' : `transcribeNote(${audio})`, named: coded ? '{ context: {} }' : `{ audio: ${audio} }`,
-    toolPrompt: coded ? "'Transcribe the available delivery note.'" : '`Transcribe the delivery note at ${recordingUrl.href}.`',
-    toolArgs: coded ? '{}' : '{ audio: recordingUrl.href }', result: streaming ? consumeAudio('text') : 'return result.text;',
+    params: [loaded || urlTool ? 'recordingUrl: URL' : raw ? 'pcm24k: Uint8Array' : 'recording: Uint8Array'], description: 'Transcribe the same delivery note.\n// Supply encoded file bytes, raw samples or a media location.', imports: coded ? tool.imports : [],
+    toolDescription: 'Transcribe the available delivery-note recording.',
+    aiImports: urlTool ? ['createDownload'] : [],
+    setup: [...(loaded || urlTool ? ['// Supply an application-authorized recordingUrl, including trusted\n// redirects and playlist resources.'] : []), ...(raw && !loaded && !configuredTool ? [audioStreamSetup] : []), ...(coded ? [tool.setup,
+      `const recordings = { 'delivery-note': ${raw ? 'openRecording' : '() => recording'} };`,
+      'const getRecording = (id: string) =>\n  recordings[id as keyof typeof recordings]();'] : [])],
+    fields: [...(raw ? ['// Requires a model with streaming support for 24 kHz mono PCM16.', "inputAudioFormat: { type: 'audio/pcm', rate: 24000 },"] : []), ...(urlTool ? ['download: createDownload({ maxBytes: 20 * 1024 * 1024 }),'] : []), ...(loaded ? ["// Install node-av. FFmpeg detects the format\n// and selects its best audio stream.", 'mediaSettings: {},'] : []), ...(coded ? [...contextField(['getRecording', ...tool.context]), ...tool.fields] : [])],
+    schema: urlTool ? 'z.object({\n  audio: z.enum([recordingUrl.href])\n    .transform(value => new URL(value)),\n})' : coded || configuredTool ? 'z.object({})' : undefined,
+    source: source('Transcriber', 'audio', options, resources, configuredTool ? loaded ? 'recordingUrl' : 'pcm24k' : undefined,
+      'async ({ findRecording, getRecording }) =>\n  getRecording(await findRecording())'),
+    call: coded || configuredTool ? 'transcribeNote({})' : `transcribeNote(${audio})`, named: coded || configuredTool ? '{ context: {} }' : `{ audio: ${audio} }`,
+    toolPrompt: "'Transcribe the available delivery note.'",
+    toolArgs: urlTool ? '{ audio: recordingUrl.href }' : '{}', result: streaming ? consumeAudio('text') : 'return result.text;',
   });
 }

@@ -1,0 +1,28 @@
+// Stream headphone model names as they arrive.
+var products = findProducts({
+  productName: "headphones",
+  count: 4
+}).elementStream
+
+data summaries = []
+
+// Start each product as the list arrives.
+for product in products
+  // Run lookups concurrently, across products too.
+  var specs = fetchSpecs(product)
+  var reviews = fetchReviews(product)
+  var price = fetchPrice(product)
+
+  // Each summary waits only for its own inputs.
+  var summary = summarizeProduct({
+    product: product,
+    specs: specs,
+    reviews: reviews,
+    price: price
+  }).output
+
+  // Collect summaries in the original product order.
+  summaries.push(summary)
+endfor
+
+return summaries.snapshot()

@@ -21,6 +21,10 @@
     document.querySelectorAll('input[name="theme"]').forEach((input) => {
       input.checked = input.value === preference;
     });
+    // Use the resolved palette color for browser chrome, including theme changes.
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    const header = document.querySelector('.site-header');
+    if (themeColor && header) themeColor.content = getComputedStyle(header).backgroundColor;
     document.querySelectorAll('.animation-panel iframe').forEach(syncFrame);
   }
 

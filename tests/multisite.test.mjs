@@ -32,6 +32,8 @@ test('sites share components but isolate branding, content, feeds, and canonical
       assert.match(html, new RegExp(`aria-label="${metadata.name} home"`));
       assert.match(html, new RegExp(`<link rel="canonical" href="${metadata.url}`));
       assert.match(html, /href="\/brand.css"/);
+      assert.match(html, /href="\/colors.css"/);
+      assert.ok(html.includes(`data-site="${site.id}"`), path);
       assert.equal((html.match(/<h1(?:\s|>)/g) || []).length, 1, path);
       const pageUrl = new URL(path.slice(output.length).replaceAll('\\', '/'), metadata.url);
       for (const [, value] of html.matchAll(/<(?:a|img|script|link|iframe)\b[^>]*?\b(?:href|src)="([^"]+)"/g)) {
@@ -43,7 +45,7 @@ test('sites share components but isolate branding, content, feeds, and canonical
     const sitemap = read(site.id, 'sitemap.xml');
     for (const [, url] of sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)) assert.equal(new URL(url).origin, metadata.url);
     assert.ok(read(site.id, 'robots.txt').includes(`${metadata.url}/sitemap.xml`));
-    for (const asset of ['styles.css', 'main.js', 'syntax.mjs', 'content.css', 'docs.css', 'theme.js']) {
+    for (const asset of ['colors.css', 'styles.css', 'main.js', 'syntax.mjs', 'content.css', 'docs.css', 'theme.js']) {
       assert.equal(read(site.id, asset), readFileSync(`shared/public/${asset}`, 'utf8'));
     }
     for (const forbidden of ['docs', 'sites.json', '.env', 'scripts', '_data', 'shared', 'sites']) {
@@ -52,10 +54,11 @@ test('sites share components but isolate branding, content, feeds, and canonical
   }
   assert.notEqual(read('cascada.dev', 'brand.css'), read('casai.run', 'brand.css'));
   assert.notEqual(read('cascada.dev', 'logo.svg'), read('casai.run', 'logo.svg'));
-  for (const path of ['posts', 'blog', 'feed.xml', 'cascada-script', 'images', 'demos']) {
+  for (const path of ['posts', 'blog', 'feed.xml', 'cascada-script', 'images']) {
     assert.equal(existsSync(resolve('dist/casai.run', path)), false, path);
   }
   assert.doesNotMatch(read('casai.run', 'index.html'), /Cascada home|Cascada Blog|href="\/feed.xml"|Playground/);
+  assert.equal(read('casai.run', 'demos/headphones-workflow.html'), read('cascada.dev', 'demos/headphones-workflow.html'));
   assert.match(read('cascada.dev', 'feed.xml'), /<title>Cascada Blog<\/title>/);
 });
 

@@ -51,10 +51,9 @@ test('intro component links select the named form and scroll to the matrix', { t
     ['llmagent_asstream', 'LLMAgent', 'LLMAgent.asStream', true],
     ['script', 'Script', 'Script', false],
     ['function', 'Function', 'Function', false],
-    ['speechgenerator_asstream', 'SpeechGenerator', 'StreamingSpeechGenerator', true],
-    ['transcriber_asstream', 'Transcriber', 'StreamingTranscriber', true],
-    ['llmagent', 'LLMAgent', 'LLMAgent', false],
-    ['template', 'Template', 'Template', false],
+    ['speechgenerator_asstream', 'SpeechGenerator', 'SpeechGenerator.asStream', true],
+    ['transcriber_asstream', 'Transcriber', 'Transcriber.asStream', true],
+    ['llmagent_astool', 'LLMAgent', 'LLMAgent.asTool', false],
     ['config', 'Config', 'Config', false],
   ];
   for (const [route, component, factory, streaming] of cases) {
@@ -75,7 +74,7 @@ test('intro component links select the named form and scroll to the matrix', { t
   const restored = new Promise(resolve => ui.window.addEventListener('popstate', resolve, { once: true }));
   ui.window.history.back();
   await restored; await ui.settle();
-  assert.equal(ui.$('#component-title').textContent, 'Template({...})');
+  assert.equal(ui.$('#component-title').textContent, 'LLMAgent.asTool({...})');
 });
 
 test('intro source-property links select the component and open its configuration property', { timeout: 30000 }, async t => {
@@ -130,7 +129,7 @@ test('option description links enable options, preserve compatible settings and 
   assert.equal(ui.$('[data-choice="asStream"]').checked, true);
   assert.match(ui.$('#component-title').textContent, /loadsTemplate\.asStream/);
   await follow('loads', 'loader'); // Following an active option's link must not turn it off.
-  await follow('asTool', 'asTool');
+  await follow('asTool', 'inputSchema');
   assert.equal(ui.$('[data-choice="asStream"]').checked, false);
   assert.equal(ui.$('[data-choice="loads"]').checked, true);
   await follow('useTools', 'tools');
@@ -235,7 +234,7 @@ test('shorthand is checked by default and toggles named calls without changing s
   await followMethod('run'); // Reopening the docs must keep the named call selected.
   await followMethod('call');
   assert.match(ui.$('#example').textContent, /await findPolicy\('How do I replace a damaged mug\?'\)/);
-  await ui.click('[data-component-choice="VoiceSessionSetup"]');
+  await ui.click('[data-component-choice="VoiceAgentBackend"]');
   assert.equal(checkbox().checked, true);
   await ui.change('[data-choice="prepareSession"]', true);
   assert.equal(checkbox().checked, false);
@@ -269,7 +268,7 @@ test('tabs, search, deep links, copied code and browser history use the displaye
   await ui.click('[data-component-choice="Translator"]');
   assert.doesNotMatch(ui.$('[data-reference-heading]').textContent, /Planned|experimental|Available/);
   await ui.change('[data-choice="asStream"]', true);
-  assert.match(ui.$('#component-title').textContent, /StreamingTranslator/);
+  assert.match(ui.$('#component-title').textContent, /Translator\.asStream/);
   assert.equal(ui.$('.ref-description').innerHTML, markdown.render(describe('Translator', ['asStream']).info.description));
   assert.doesNotMatch(ui.$('[data-reference-heading]').textContent, /Planned/);
   const wentBack = new Promise(resolve => ui.window.addEventListener('popstate', resolve, { once: true }));
@@ -418,15 +417,16 @@ test('source segments allow direct input and preserve intrinsic component source
   await ui.click('[data-component-choice="Transcriber"]');
   assert.equal(ui.$('[data-source="template"]'), null);
   assert.ok(ui.$('[data-source="script"]'));
-  assert.equal(ui.$('[data-source="default"]').textContent, 'Direct input');
-  assert.equal(ui.$('[data-choice="loads"]'), null);
+  assert.equal(ui.$('[data-source="audio"]').textContent, 'Audio');
+  assert.equal(ui.$('[data-choice="loads"]').checked, false);
   await ui.click('[data-source="script"]');
   assert.equal(ui.$('[data-choice="loads"]').closest('.ref-group-body'), ui.$('.ref-source-controls > .ref-group-body'));
   assert.equal(ui.$('[data-choice="loads"]').checked, false);
   await ui.change('[data-choice="loads"]', true);
   assert.match(ui.$('#component-title').textContent, /loadsScript/);
-  await ui.click('[data-source="default"]');
-  assert.equal(ui.$('[data-choice="loads"]'), null);
+  await ui.click('[data-source="audio"]');
+  await ui.change('[data-choice="loads"]', false);
+  assert.equal(ui.$('[data-choice="loads"]').checked, false);
   assert.equal(ui.$('#component-title').textContent, 'Transcriber({...})');
 });
 
@@ -509,7 +509,7 @@ test('compact Input and Return rows link to their separate references', async t 
 test('Config source and behavior choices update inheritance examples and compatible destinations', async t => {
   const ui = await setup(t, { component: 'Config' });
   assert.equal(ui.$('#component-title').textContent, 'Config({...})');
-  assert.deepEqual([...ui.window.document.querySelectorAll('[data-source]')].map(button => button.textContent), ['Text', 'Template', 'Script', 'Function']);
+  assert.deepEqual([...ui.window.document.querySelectorAll('[data-source]')].map(button => button.textContent), ['Audio', 'Text', 'Template', 'Script', 'Function']);
   assert.equal(ui.$('[data-source][aria-pressed="true"]'), null);
   assert.doesNotMatch(ui.$('.ref-source-reference').textContent, /Inherit/);
   assert.equal(ui.$('[data-choice="loads"]'), null);
@@ -527,14 +527,14 @@ test('Config source and behavior choices update inheritance examples and compati
   await ui.change('[data-choice="asTool"]', true);
   assert.equal(ui.$('#component-title').textContent, 'Config.withTemplate.asTool({...})');
   assert.match(ui.$('#example').textContent, /const outlet = LLMAgent/);
-  assert.match(ui.$('#example').textContent, /return outlet\(\{\}\)/);
+  assert.match(ui.$('#example').textContent, /tools: \{ outlet \}, script: 'return outlet\(\{\}\)'/);
   assert.ok(ui.$('.ref-config-overview a[href*="template_astool"]'));
   assert.equal(ui.$('.ref-config-overview a[href*="transcriber"]'), null);
   await ui.change('[data-choice="asStream"]', true);
   assert.equal(ui.$('[data-choice="asTool"]').checked, false);
   assert.equal(ui.$('#component-title').textContent, 'Config.withTemplate.asStream({...})');
   assert.match(ui.$('#example').textContent, /result\.textStream/);
-  assert.equal(ui.$('.ref-config-overview .ref-link-grid').children.length, 1);
+  assert.deepEqual([...ui.window.document.querySelectorAll('.ref-config-overview .ref-link-grid a')].map(link => link.textContent.trim()), ['LLMAgent.withTemplate.asStream ↗', 'SpeechGenerator.withTemplate.asStream ↗']);
   await ui.click('[data-source="function"]');
   assert.equal(ui.$('[data-choice="loads"]'), null);
   assert.match(ui.$('#example').textContent, /Config\.withFunction\.asStream/);
@@ -570,7 +570,7 @@ test('return summaries follow variants and old result field links still open', a
   assert.match(ui.$('#results .ref-contract-body').textContent, /share one native execution/);
   await ui.change('[data-choice="asTool"]', true);
   assert.match(ui.$('#results .ref-contract-body').textContent, /Tool execution/);
-  assert.match(ui.$('#results .ref-contract-body').textContent, /completed parsed output/);
+  assert.match(ui.$('#results .ref-contract-body').textContent, /completed text or parsed structured application value/);
   assert.equal(ui.$('#results .ref-member'), null, 'Full field lists belong in Return');
   assert.match(ui.$('#return').textContent, /Tool execution/);
 });
@@ -679,8 +679,9 @@ test('input help explains concrete values and how the selected source uses conte
   assert.match(ui.$('.ref-source-summary').textContent, /JavaScript function.*prompt.*context/);
   assert.match(input().textContent, /validates application values when inputSchema is configured/);
   await ui.click('[data-component-choice="Transcriber"]');
-  assert.equal(ui.$('.ref-contract-type .ref-type').textContent, 'string | Uint8Array | ArrayBuffer | Buffer | URL');
-  assert.match(input().textContent, /base64 string/);
+  assert.equal(ui.$('.ref-contract-type .ref-type').textContent, 'string | URL | Uint8Array | ArrayBuffer | ReadableStream<string | Uint8Array>');
+  assert.match(input().textContent, /Encoded audio bytes\/base64/);
+  assert.match(input().textContent, /raw bytes\/a fresh stream with a format/);
   await ui.click('[data-component-choice="Decision"]');
   assert.match(input().textContent, /ordered array of text, file and JSON parts/);
   await ui.click('[data-component-choice="ImageGenerator"]');

@@ -17,7 +17,7 @@ sites/
     _data/site.json             # Name, URL, menus, metadata, blog settings
     pages/                      # Homepage and regular pages
     posts/                      # Blog posts
-    public/                     # logo.svg, brand.css, images, demos
+    public/                     # logo.svg, brand.css, images
     docs/source/                # Saved imported Markdown and provenance
     docs/generated/             # Saved reference HTML and sidebar indexes
   casai.run/
@@ -27,7 +27,8 @@ sites/
     public/
 shared/
   _includes/                    # Layouts, header/footer, blog/feed/sitemap/404
-  public/                       # Shared CSS and browser JavaScript
+  public/                       # Shared CSS, browser JavaScript and demos
+  examples/                     # Code examples shared by both homepages
   data/                         # Shared page and post defaults
 scripts/                        # Common build, dev, docs, and SFTP tooling
 tests/
@@ -37,10 +38,25 @@ dist/
   casai.run/                     # Deploy this directory to casai.run
 ```
 
-Cascada retains its existing public URLs. Casai currently has a minimal homepage
-and documentation links, using deep teal for its header, navy for the Why Casai section and footer,
-and the supplied Casai SVG logo. Its content can develop independently. Its
-Documentation page includes the interactive component quick reference.
+Cascada retains its existing public URLs. Casai introduces AI orchestration,
+reusable components, concurrency and streaming, using burgundy (`#7d1040`) for its header
+and navy (`#1c3350`) for the Why Casai section and footer. Its component list reads the
+canonical matrix summaries and status notices in a simplified example explorer.
+Both homepages render the same
+headphones examples from `shared/examples/` and use the shared animated demo.
+The `codeExample` shortcode renders example files at build time, preserving
+literal Cascada Template syntax. The homepage Markdown opts into Nunjucks for
+these inserts; other Markdown keeps template evaluation disabled.
+
+The Casai homepage uses the canonical `simple` matrix profile; the quick
+reference uses `full`. Profiles live in Casai's `docs/matrix/profiles.js` and
+arrive through `matrix:sync`, so both views share examples and selection rules.
+The homepage shows Config first, followed by component buttons in the same
+responsive grid as the full reference, with short descriptions and examples for the selection.
+Customization starts collapsed. Advanced choices and experimental SDK notices
+stay in the full reference; development notices remain visible on the homepage.
+Its separate browser entry excludes the full API-reference snapshot. Rendering,
+syntax highlighting, copy and download behavior are shared between both views.
 
 ## Development and building
 
@@ -140,20 +156,30 @@ links in build output are rejected before uploading. See
 
 Edit `sites/<website>/_data/site.json` to change the name, canonical URL,
 description, author, header and footer navigation, GitHub link, optional upcoming
-navigation labels, and browser theme color. Set `blog` to true to generate the
+navigation labels. Set `blog` to true to generate the
 shared blog and Atom feed; `blogDescription` supplies the blog introduction.
 A site without a blog has no blog/feed links or output. Sitemaps and feeds contain
 only the current site's content and canonical domain.
 
 Put each site's public assets in `sites/<website>/public/`. They are copied to
-that site's root, so its logo is always `/logo.svg` and its palette `/brand.css`.
-Shared assets retain stable URLs such as `/styles.css` and `/main.js`. Keep
+that site's root, so its logo is always `/logo.svg` and its layout overrides `/brand.css`.
+Shared assets retain stable URLs such as `/colors.css`, `/styles.css`, and `/main.js`. Keep
 site-specific asset filenames separate from files in `shared/public/`.
 
-`brand.css` loads after the common stylesheet. Override semantic CSS variables
-such as `--brand` (header), `--accent` (links/controls), and `--brand-deep`
-(footer/feature sections). Values can use `light-dark(light, dark)`; additional
-surface and syntax variables are defined in `shared/public/styles.css`.
+**Edit `shared/public/colors.css` to change colors for both sites.** It contains
+the shared palette, Casai's brand overrides, reference badges/notices, and the
+workflow demo palette. Both sites and the standalone demo load it directly.
+The `:root` block supplies shared defaults; `:root[data-site="casai.run"]`
+overrides Casai's brand colors, and `:root[data-demo="headphones-workflow"]`
+contains the demo colors. Each page gets its `data-site` from `sites.json`.
+Use semantic variables such as `--brand` (header), `--accent` (links/controls),
+`--brand-deep` (footer/feature sections), and `--on-brand` (text on brand backgrounds).
+`light-dark(light, dark)` supplies each theme's values. The browser toolbar color
+follows the resolved header background automatically.
+
+`brand.css` loads after the shared styles for site-specific layout rules. Keep
+color values and derived color mixes in `colors.css`; other styles reference its
+variables instead of defining palettes of their own.
 
 The header, footer, mobile menu, sticky shrinking header, appearance controls,
 code highlighting/copy buttons, article styles, and documentation sidebar remain
@@ -165,7 +191,7 @@ existing `cascada-theme` preference is preserved.
 Both logos use `fill="currentColor"`, so inline SVGs follow the CSS `color` of
 their parent (or a `color` set directly on the SVG). The shared `.brand-mark`
 masks `/logo.svg` with the current text color; for example,
-`.brand-mark { color: #1b666b; }` recolors it without editing the asset. A regular
+`.brand-mark { color: var(--accent); }` recolors it without editing the asset. A regular
 `<img src="/logo.svg" width="32" height="32" alt="Casai">` can also be used,
 but an external SVG does not inherit the page's color. Keep an accessible name
 for a standalone logo and hide decorative marks beside equivalent text.
@@ -384,6 +410,8 @@ that write the same output directory.
    metadata file and set its name, URL, menus, theme fields, and blog settings.
 3. Add `public/brand.css`, `public/logo.svg`, and `pages/index.md`. The page
    defaults file contains `module.exports = require('../../../shared/data/pages.cjs');`.
+   Put any palette overrides in `shared/public/colors.css` under
+   `:root[data-site="<domain>"]`; reserve `brand.css` for layout styles.
 4. Add posts or a documentation profile only when needed.
 5. Copy the root `.env.example` to `sites/<domain>/.env` and configure its account
    and `OVH_SFTP_REMOTE_DIR`. Shell/CI overrides use the site's `<PREFIX>_OVH_SFTP_*`.

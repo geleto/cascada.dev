@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it';
 import { highlight } from '../../../shared/public/syntax.mjs';
-import { components, getControls, selectOption, sourceUrl } from '../docs/matrix/matrix.js';
+import { components, selectOption, sourceUrl } from '../docs/matrix/matrix.js';
+import { createMatrix } from '../docs/matrix/profiles.js';
 import { introduction } from '../docs/matrix/introduction.js';
 import { isTypeAbbreviated } from '../docs/matrix/reference/type-display.js';
 import { availableViews, basePath, componentChoices, hasReturnReference, referencePath, selectionUrl, viewTitles } from './state.mjs';
@@ -9,6 +10,7 @@ export const escape = value => String(value ?? '').replace(/[&<>"']/g, char => (
 const anchor = value => String(value).replace(/[^\w-]/g, '-');
 const badge = (label, kind = '') => `<span class="ref-badge ${kind}">${escape(label)}</span>`;
 const titleCase = value => value[0].toUpperCase() + value.slice(1);
+const componentLabel = name => `<span>${escape(name).replace(/([a-z\d])([A-Z])/g, '$1<wbr>$2').replace(/([A-Z])([A-Z][a-z])/g, '$1<wbr>$2')}</span>`;
 const svg = content => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${content}</svg>`;
 export const icons = {
   copy: svg('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'),
@@ -18,7 +20,9 @@ export const icons = {
   close: svg('<path d="m6 6 12 12M6 18 18 6"/>'),
 };
 
-export function createRenderer(provenance) {
+export function createRenderer(provenance, { profile = 'full' } = {}) {
+  const matrix = createMatrix(profile);
+  const simple = profile === 'simple';
   const markdown = new MarkdownIt({ html: false, highlight });
   const repositoryBase = `${provenance.repository}/blob/${provenance.commit}/`;
   const link = value => /^(?:https?:|mailto:|#)/.test(value) || value.startsWith(basePath) ? value : new URL(value, repositoryBase).href;
@@ -148,14 +152,14 @@ export function createRenderer(provenance) {
     const clears = transition => transition?.cleared.length ? `Switching clears ${transition.cleared.map(id => names[id]).join(', ')}.` : '';
     const choiceHtml = (choice, label = escape(choice.name)) => {
       const note = [!choice.available && !choice.transition ? choice.unavailableReasons?.join(' ') : '', clears(choice.transition)].filter(Boolean).join(' ');
-      const hint = [choice.description, note].filter(Boolean).join(' ');
       const description = choice.shortDescription ?? choice.description;
-      const descriptionHtml = markdown.renderInline(description, { controlSelection: {
+      const hint = [simple ? description.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') : choice.description, note].filter(Boolean).join(' ');
+      const descriptionHtml = markdown.renderInline(simple ? description.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') : description, { controlSelection: {
         component: reference.component, options: choice.active ? reference.activeOptions : choice.transition?.activeOptions ?? reference.activeOptions,
       } });
       return `<label class="ref-choice${choice.transition ? '' : ' is-disabled'}" title="${escape(hint)}"><input type="checkbox" data-choice="${choice.id}"${choice.active ? ' checked' : ''}${choice.transition ? '' : ' disabled'} aria-labelledby="label-${choice.id}" aria-describedby="hint-${choice.id}${note ? ` note-${choice.id}` : ''}"><span class="ref-choice-text"><span class="ref-choice-name" id="label-${choice.id}">${label}</span><span class="ref-choice-description" id="hint-${choice.id}">${descriptionHtml}</span></span></label>${note ? `<span class="visually-hidden" id="note-${choice.id}">${escape(note)}</span>` : ''}`;
     };
-    const sections = getControls(reference.component, reference.activeOptions, { unavailable: 'include' });
+    const sections = matrix.getControls(reference.component, reference.activeOptions, { unavailable: 'include' });
     const source = sections.find(section => section.id === 'source')?.control;
     const checkboxes = sections.filter(section => section.id !== 'source').flatMap(section => section.groups.flatMap(group => group.choices)).filter(choice => choice.active || choice.transition);
     const variants = new Set(sections.find(section => section.id === 'variants')?.groups.flatMap(group => group.choices.map(choice => choice.id)) || []);
@@ -164,15 +168,15 @@ export function createRenderer(provenance) {
       const id = `filter-title-${anchor(title).toLowerCase()}`;
       return `<fieldset class="ref-option-group ${className}" aria-labelledby="${id}"><legend id="${id}">${escape(title)}</legend><div class="ref-group-body">${content}</div></fieldset>`;
     };
-    const sourceHint = source?.description;
+    const sourceHint = simple ? 'Supply input directly, or prepare it with a template, script or function.' : source?.description;
     const input = reference.form.primaryProperty;
     const groupedSource = source?.choices.length > 1;
     const loadMode = ['default', 'function', input].includes(source?.kind) ? '' : source?.kind;
     const loadLabel = groupedSource ? 'Load from file' : `Load ${loadMode ? escape(loadMode) + ' ' : ''}<strong>${escape(input || 'source')}</strong> from file`;
     const loadControl = source?.loads.available ? choiceHtml(source.loads, loadLabel) : '';
-    const sourceContent = groupedSource ? `${loadControl}<div class="ref-source-segments" role="group" aria-label="Input source" aria-describedby="hint-source" title="${escape(sourceHint)}">${source.choices.map(choice => `<button type="button" data-source="${choice.id}" aria-pressed="${choice.id === source.kind}" title="${escape(choice.description)}">${escape(choice.name)}</button>`).join('')}</div>
+    const sourceContent = groupedSource ? `${loadControl}<div class="ref-source-segments" role="group" aria-label="Input source" aria-describedby="hint-source" title="${escape(sourceHint)}">${source.choices.map(choice => `<button type="button" data-source="${choice.id}" aria-pressed="${choice.id === source.kind}" title="${escape(simple ? choice.name : choice.description)}">${escape(simple && choice.id === 'default' ? 'Direct input' : choice.name)}</button>`).join('')}</div>
       <span class="visually-hidden" id="hint-source">${escape(sourceHint)}</span>` : '';
-    const sourceHtml = groupedSource ? optionGroup(titleCase(input || 'source'), sourceContent, 'ref-source-controls')
+    const sourceHtml = groupedSource ? optionGroup(simple ? 'Prepare the input' : titleCase(input || 'source'), sourceContent, 'ref-source-controls')
       : loadControl ? `<div class="ref-source-controls ref-source-single">${loadControl}</div>` : '';
     const variantChoices = checkboxes.filter(choice => variants.has(choice.id));
     const exampleChoices = checkboxes.filter(choice => !variants.has(choice.id));
@@ -229,10 +233,10 @@ export function createRenderer(provenance) {
     return `<span id="info"></span>${reference.concepts.map(concept => `<details class="ref-concept" id="concept-${anchor(concept.id)}"><summary>${escape(concept.title)}</summary><div class="ref-prose">${concept.paragraphs.map(md).join('')}<a href="${escape(link(concept.link))}">Read the guide ↗</a></div></details>`).join('')}
       ${descriptionSources(reference) ? `<div class="ref-attribution">${md(descriptionSources(reference))}</div>` : ''}`;
   }
-  function example(example, reference) {
-    return `<p class="ref-muted">${escape(reference.example.note)}</p>${example.notice ? `<div class="ref-notice">${escape(example.notice)}</div>` : ''}
-      ${example.files.map((file, index) => `<figure class="ref-code"><figcaption><span>${escape(file.name)}</span><div><button class="ref-icon-button" type="button" data-copy-file="${index}" aria-label="Copy ${escape(file.name)}" title="Copy ${escape(file.name)}">${icons.copy}</button><button class="ref-icon-button" type="button" data-download-file="${index}" aria-label="Download ${escape(file.name)}" title="Download ${escape(file.name)}">${icons.download}</button></div></figcaption><pre tabindex="0" aria-label="${escape(file.name)}"><code class="language-${escape(file.language)}">${highlight(file.code, file.language)}</code></pre></figure>`).join('')}
-      ${example.explanations.length ? `<section class="ref-section"><h3>In this example</h3><div class="ref-prose">${example.explanations.map(md).join('')}</div></section>` : ''}`;
+  function example(example, reference, { compact = false } = {}) {
+    return `${!compact ? `<p class="ref-muted">${escape(reference.example.note)}</p>` : ''}${example.notice ? `<div class="ref-notice">${escape(example.notice)}</div>` : ''}
+      ${example.files.map((file, index) => `<figure class="ref-code"><figcaption><span>${compact && file.language === 'typescript' ? 'TypeScript · ' : ''}${escape(file.name)}</span><div><button class="ref-icon-button" type="button" data-copy-file="${index}" aria-label="Copy ${escape(file.name)}" title="Copy ${escape(file.name)}">${icons.copy}</button><button class="ref-icon-button" type="button" data-download-file="${index}" aria-label="Download ${escape(file.name)}" title="Download ${escape(file.name)}">${icons.download}</button></div></figcaption><pre tabindex="0" aria-label="${escape(file.name)}"><code class="language-${escape(file.language)}">${highlight(file.code, file.language)}</code></pre></figure>`).join('')}
+      ${!compact && example.explanations.length ? `<section class="ref-section"><h3>In this example</h3><div class="ref-prose">${example.explanations.map(md).join('')}</div></section>` : ''}`;
   }
   function config(reference) {
     const properties = reference.config.properties;
@@ -277,11 +281,11 @@ export function createRenderer(provenance) {
       <section class="ref-introduction" aria-labelledby="introduction-title">
         <div class="ref-intro-heading"><h2 id="introduction-title">${escape(introduction.title)}</h2><a href="#component-factories">Explore the components <span aria-hidden="true">↓</span></a></div>
         <div class="ref-intro-lead ref-prose">${md(introduction.lead)}</div>
-        <dl class="ref-principles">${introduction.principles.map(principle => `<div><dt>${escape(principle.title)}</dt><dd class="ref-prose">${md(principle.text)}</dd></div>`).join('')}</dl>
+        <div class="ref-principles">${introduction.principles.map(principle => `<details class="ref-principle"><summary><strong>${escape(principle.title)}.</strong> ${markdown.renderInline(principle.summary)}</summary><div class="ref-prose">${md(principle.text)}</div></details>`).join('')}</div>
       </section>
       <h2 class="ref-matrix-title" id="component-factories">Component factories</h2>
       <div class="ref-workspace"><aside class="ref-sidebar" aria-label="Component factories and example options">
-        <div class="ref-component-index"><div class="ref-component-grid" role="group" aria-label="Component factories">${componentChoices.map(component => `<button type="button" data-component-choice="${component.name}" aria-pressed="${component.name === reference.component}">${escape(component.name)}</button>`).join('')}</div><noscript><nav class="ref-component-grid" aria-label="Component factories">${componentChoices.map(component => `<a href="${referencePath(component.name)}"${component.name === reference.component ? ' aria-current="page"' : ''}>${escape(component.name)}</a>`).join('')}</nav></noscript></div>
+        <div class="ref-component-index"><div class="ref-component-grid" role="group" aria-label="Component factories">${componentChoices.map(component => `<button type="button" data-component-choice="${component.name}" aria-pressed="${component.name === reference.component}">${componentLabel(component.name)}</button>`).join('')}</div><noscript><nav class="ref-component-grid" aria-label="Component factories">${componentChoices.map(component => `<a href="${referencePath(component.name)}"${component.name === reference.component ? ' aria-current="page"' : ''}>${componentLabel(component.name)}</a>`).join('')}</nav></noscript></div>
         <div class="ref-options" data-controls>${controls(reference)}</div>
       </aside>
       <div class="ref-reader"><div data-reference-heading>${heading(reference)}</div>
@@ -290,6 +294,32 @@ export function createRenderer(provenance) {
         <footer class="ref-reader-footer"><span>Take this reference with you</span><div><a data-export="md" href="${referencePath(reference.component, reference.activeOptions)}README.md">Markdown ↓</a><a data-export="json" href="${referencePath(reference.component, reference.activeOptions)}reference.json">JSON ↓</a></div></footer>
       </div></div><p class="ref-live" data-ref-status role="status" aria-live="polite"></p><noscript><p class="ref-notice">All reference sections are shown. Enable JavaScript to customize examples. <a href="${basePath}forms/">Browse all API forms</a>.</p></noscript>
       <details class="ref-build-info"><summary>Reference versions &amp; sources</summary><dl>${Object.entries(reference.versions).map(([name, version]) => `<dt>${escape(name)}</dt><dd>${escape(version)}</dd>`).join('')}</dl><p>Source revision: <a href="${provenance.repository}/tree/${provenance.commit}">${provenance.commit}</a>${provenance.modified ? ' with local changes; exact file hashes are recorded in the snapshot.' : ''}</p><p><a href="${basePath}source.json">Snapshot provenance</a> · <a href="${basePath}forms/">Browse all API forms</a> · <a href="${basePath}index.json">Reference index</a> · <a href="${basePath}notices/THIRD_PARTY.md">Sources &amp; licenses</a></p></details></div>`;
+  }
+  function simpleHeading(exampleData) {
+    const component = matrix.components.find(item => item.name === exampleData.component);
+    return `<h3 class="ref-component-title" id="simple-component-title">${escape(component.name)}</h3>
+      <p class="ref-description">${escape(component.shortDescription)}</p>
+      ${component.workInProgress.map(note => `<p class="ref-simple-status">${badge('In development', 'planned')} ${escape(note.replace(/^Work in progress: /, ''))}</p>`).join('')}`;
+  }
+  function simpleControls(exampleData) {
+    return controls({ component: exampleData.component, activeOptions: exampleData.activeOptions, form: {}, info: {} });
+  }
+  function simpleShell(exampleData) {
+    // A single HTML line survives embedding in Markdown; entities retain code newlines.
+    return `<div class="ref-shell ref-simple" data-simple-matrix data-component="${escape(exampleData.component)}" data-options="${escape(exampleData.activeOptions.join(','))}">
+      <div class="ref-workspace">
+        <div class="ref-sidebar">
+          <p class="ref-picker-label" id="simple-component-picker-label">Choose a component</p>
+          <div class="ref-component-grid" role="group" aria-labelledby="simple-component-picker-label">${matrix.components.map(component => `<button type="button" data-component-choice="${component.name}" aria-pressed="${component.name === exampleData.component}" title="${escape(component.shortDescription)}" disabled>${componentLabel(component.name)}</button>`).join('')}</div>
+          <div class="ref-simple-summary" data-simple-heading>${simpleHeading(exampleData)}</div>
+          <details class="ref-customize"><summary>Customize the example</summary><div class="ref-options" data-controls>${simpleControls(exampleData)}</div><button type="button" data-reset-example disabled>Reset example</button></details>
+          <a class="ref-full-link" data-full-reference href="${selectionUrl(exampleData.component, exampleData.activeOptions, 'example', '#component-factories')}">Explore the full reference <span aria-hidden="true">→</span></a>
+          <noscript><p>Enable JavaScript to switch components and customize the example.</p></noscript>
+        </div>
+        <div class="ref-reader" data-simple-example>${example(exampleData, null, { compact: true })}</div>
+      </div>
+      <p class="ref-live" data-ref-status role="status" aria-live="polite"></p>
+    </div>`.replaceAll('\n', '&#10;');
   }
   function toMarkdown(reference, exampleData) {
     let text = `# ${reference.form.factory || reference.component}\n\n${reference.info.description}\n\n**Status:** ${reference.status}\n\n**Versions:** ${Object.entries(reference.versions).map(([name, version]) => `${name} ${version}`).join(', ')}\n\n**Source revision:** ${provenance.commit}${provenance.modified ? ' (includes local changes; see source.json for exact file hashes)' : ''}\n\n`;
@@ -316,5 +346,5 @@ export function createRenderer(provenance) {
     // Resolve authored repository links just as the HTML renderer does.
     return text.replace(/\]\(([^)]+)\)/g, (match, url) => `](${link(url)})`);
   }
-  return { shell, heading, controls, panel, panels, tabs, example, config, returns, notes, toMarkdown };
+  return { shell, heading, controls, panel, panels, tabs, example, config, returns, notes, toMarkdown, simpleShell, simpleHeading, simpleControls };
 }

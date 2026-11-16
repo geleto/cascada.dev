@@ -1,13 +1,31 @@
 import { readFileSync } from 'node:fs';
 import { createMarkdownRenderer } from './scripts/markdown.mjs';
+import { highlight } from './shared/public/syntax.mjs';
 import { selectSites } from './scripts/sites.mjs';
 import pluginRss from '@11ty/eleventy-plugin-rss';
 
 export default function (eleventyConfig) {
   const site = selectSites(process.env.WEBSITE || 'cascada.dev')[0];
   const input = site.input;
+  eleventyConfig.addGlobalData('siteId', site.id);
   eleventyConfig.addPlugin(pluginRss);
-  eleventyConfig.setLibrary('md', createMarkdownRenderer());
+  const markdown = createMarkdownRenderer();
+  // Ship colored code in the page HTML, before browser enhancements run.
+  markdown.set({ highlight });
+  eleventyConfig.setLibrary('md', markdown);
+  // Shared examples are rendered at build time, including literal template syntax.
+  eleventyConfig.addShortcode('codeExample', (name, caption, label, id = '') => {
+    if (!/^[\w-]+\.(?:ts|js|cas)$/.test(name)) throw new Error(`Invalid example: ${name}`);
+    const source = readFileSync(new URL(`./shared/examples/${name}`, import.meta.url), 'utf8').trimEnd();
+    const language = name.endsWith('.cas') ? 'cascada' : name.endsWith('.ts') ? 'typescript' : 'javascript';
+    const escape = markdown.utils.escapeHtml;
+    const scriptDocs = site.id === 'cascada.dev' ? '/cascada-script/' : 'https://cascada.dev/cascada-script/';
+    const captionHtml = escape(caption).replace(/^CascadaScript\b/, `<a href="${scriptDocs}">CascadaScript</a>`);
+    const code = '```' + language + ` {tabindex="0" aria-label="${escape(label)}"${id ? ` id="${escape(id)}"` : ''} data-language="${language}"}\n${source}\n` + '```';
+    // Emit a fence for the page's Markdown pass, so blank lines and indentation
+    // survive without processing already-rendered <pre> HTML a second time.
+    return `<figure class="code-panel">\n<figcaption><span>${captionHtml}</span><button class="copy-button" type="button" aria-label="Copy ${escape(label)}" hidden>Copy</button></figcaption>\n\n${code}\n\n</figure>`;
+  });
   eleventyConfig.addShortcode('documentation', (name) => {
     const allowed = Object.keys(site.documentation?.documents || {}).flatMap((name) => [name, `${name}-index`]);
     if (!allowed.includes(name)) throw new Error(`Unknown documentation fragment for ${site.id}: ${name}`);

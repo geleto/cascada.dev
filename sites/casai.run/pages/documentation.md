@@ -13,9 +13,14 @@ Find the right component, customize a complete example, and look up configuratio
 
 Start with the [Casai guide on GitHub](https://github.com/geleto/casai#readme) for an introduction and workflow examples.
 
+## Examples
+
+- **[Casai examples](https://github.com/geleto/casai-examples)** - Practical AI agent and workflow patterns, with instructions for running and adapting each example.
+- **[Smart Dashboard](https://github.com/geleto/smart-db-dashboard)** - Turn plain-English questions about a database into dashboards with charts, tables and insights. See concurrent agents and streaming in a complete application, and [explore the example dashboards](https://github.com/geleto/smart-db-dashboard#example-dashboards).
+
 ## Cascada
 
-Casai uses Cascada to orchestrate workflows and compose prompts:
+Casai uses [Cascada](https://cascada.dev) to orchestrate workflows and compose prompts:
 
 - [CascadaScript reference](https://cascada.dev/cascada-script/)
 - [Cascada Template reference](https://cascada.dev/cascada-template/)

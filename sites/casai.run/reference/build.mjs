@@ -9,7 +9,7 @@ export async function configureReference(eleventy, projectRoot) {
   const provenance = JSON.parse(await readFile(resolve(siteRoot, 'docs/matrix-source.json'), 'utf8'));
   const cache = resolve(projectRoot, '.cache/casai-reference');
   await mkdir(cache, { recursive: true });
-  await build({ entryPoints: [resolve(siteRoot, 'reference/client.mjs')], outfile: resolve(cache, 'quick-reference.js'), bundle: true, format: 'esm', platform: 'browser', target: ['es2022'], minify: true, legalComments: 'eof' });
+  await build({ entryPoints: { 'quick-reference': resolve(siteRoot, 'reference/client.mjs'), 'simple-matrix': resolve(siteRoot, 'reference/simple-client.mjs') }, outdir: cache, bundle: true, format: 'esm', platform: 'browser', target: ['es2022'], minify: true, legalComments: 'eof' });
   const staticBundle = await build({ entryPoints: [resolve(siteRoot, 'reference/static.mjs')], bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external', target: 'node18' });
   const staticPath = resolve(cache, 'reference.mjs');
   const contents = staticBundle.outputFiles[0].contents;
@@ -17,9 +17,14 @@ export async function configureReference(eleventy, projectRoot) {
   // Node caches ESM modules. Key the complete compiled graph by content so watch
   // builds use exactly the same current data as the freshly built browser bundle.
   const revision = createHash('sha256').update(contents).digest('hex');
-  const { components, referenceSelection, referenceSelections, render, concepts, describe, referenceVersions, basePath, defaultComponent, referencePath, createRenderer, escape } = await import(`${pathToFileURL(staticPath).href}?v=${revision}`);
+  const { components, createMatrix, referenceSelection, referenceSelections, render, concepts, describe, referenceVersions, basePath, defaultComponent, referencePath, createRenderer, escape } = await import(`${pathToFileURL(staticPath).href}?v=${revision}`);
   const renderer = createRenderer(provenance);
+  // The homepage uses the simplified shared catalog and examples.
+  const simpleMatrix = createMatrix('simple');
+  const simpleExample = await simpleMatrix.render(defaultComponent);
+  eleventy.addGlobalData('casaiSimpleMatrix', createRenderer(provenance, { profile: 'simple' }).simpleShell(simpleExample));
   eleventy.addPassthroughCopy({ [resolve(cache, 'quick-reference.js')]: '/reference-assets/quick-reference.js' });
+  eleventy.addPassthroughCopy({ [resolve(cache, 'simple-matrix.js')]: '/reference-assets/simple-matrix.js' });
   eleventy.addPassthroughCopy({ [resolve(siteRoot, 'docs/matrix-source.json')]: `${basePath.slice(1)}source.json` });
   for (const name of ['THIRD_PARTY.md', 'LICENSE-Apache-2.0.txt', 'LICENSE-Cascada.txt']) {
     eleventy.addPassthroughCopy({ [resolve(siteRoot, 'docs/matrix/reference', name)]: `${basePath.slice(1)}notices/${name}` });

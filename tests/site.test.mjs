@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
+import { JSDOM } from 'jsdom';
+import { components } from '../sites/casai.run/docs/matrix/matrix.js';
 
 const output = resolve('dist/cascada.dev');
 const read = (path) => readFileSync(join(output, path), 'utf8');
@@ -102,18 +104,54 @@ test('articles have no header images; the Kitchen Chef image is in its body', ()
 test('homepage preserves literal Cascada templates and interactive examples', () => {
   const home = read('index.html');
   assert.ok(existsSync('sites/cascada.dev/pages/index.md'), 'the homepage is authored in Markdown');
-  for (const id of ['hero', 'why', 'simple', 'concurrent', 'results', 'errors', 'sequential', 'javascript', 'templates', 'casai']) {
+  for (const id of ['hero', 'why', 'simple', 'concurrent', 'results', 'errors', 'sequential', 'javascript', 'templates', 'casai', 'start']) {
     assert.match(home, new RegExp(`<h[12] id="${id}-title"`), `stable ${id} heading`);
   }
-  assert.equal((home.match(/<pre tabindex="0" aria-label="[^"]+">/g) || []).length, 9, 'code examples keep their labels and keyboard access');
+  assert.equal((home.match(/<pre tabindex="0" aria-label="[^"]+">/g) || []).length, 11, 'code examples keep their labels and keyboard access');
   assert.match(home, /<p class="tagline"><strong>/);
   assert.match(home, /<ol class="workflow-steps">/);
   assert.match(home, /<ul class="feature-list">/);
-  assert.ok(home.includes('{{ topic }}'));
-  assert.ok(home.includes('{% for url in urls %}'));
-  assert.ok(home.includes('Model: {{ product }}'));
-  assert.ok(home.includes('product: z.string()'));
+  const source = [...new JSDOM(home).window.document.querySelectorAll('pre code')].map(code => code.textContent).join('\n');
+  assert.ok(source.includes('{{ topic }}'));
+  assert.ok(source.includes('{% for url in urls %}'));
+  assert.ok(source.includes('Model: {{ product }}'));
+  assert.ok(source.includes('product: z.string()'));
   assert.equal((home.match(/class="example-tablist"/g) || []).length, 2);
   assert.equal((home.match(/src="\/demos\/headphones-workflow.html\?embedded=1"/g) || []).length, 2);
   assert.doesNotMatch(home, /href="\/content.css"/);
+});
+
+test('homepages share current examples and Casai publishes the canonical component summaries', () => {
+  const cascada = new JSDOM(read('index.html')).window.document;
+  const casai = new JSDOM(readFileSync('dist/casai.run/index.html', 'utf8')).window.document;
+  for (const [id, file] of [['headphones-code', 'headphones.cas'], ['casai-components-code', 'headphones.ts']]) {
+    const source = readFileSync(`shared/examples/${file}`, 'utf8').replace(/\r\n/g, '\n').trimEnd();
+    for (const document of [cascada, casai]) assert.equal(document.getElementById(id).textContent.trimEnd(), source);
+  }
+  const entries = [...casai.querySelectorAll('[data-simple-matrix] .ref-component-grid [data-component-choice]')];
+  const catalog = components.filter(component => ['configuration', 'component'].includes(component.kind));
+  assert.equal(entries.length, catalog.length);
+  assert.equal(entries[0].dataset.componentChoice, 'Config');
+  assert.equal(casai.querySelector('.component-config'), null);
+  for (const component of catalog) {
+    const entry = entries.find(entry => entry.dataset.componentChoice === component.name);
+    assert.ok(entry, component.name);
+    assert.equal(entry.textContent, component.name);
+    assert.equal(entry.title, component.shortDescription);
+  }
+  assert.equal(casai.querySelector('[data-simple-heading] .ref-description').textContent, catalog.find(component => component.name === 'LLMAgent').shortDescription);
+  assert.equal(casai.querySelector('.ref-customize').open, false);
+  assert.ok(![...casai.querySelectorAll('h3')].some(heading => heading.textContent === 'Use tools across components'));
+  const toolSection = [...casai.querySelectorAll('h3')].find(heading => heading.textContent === 'Turn a component into a tool').closest('.feature-copy');
+  assert.match(toolSection.textContent, /Use these tools alongside AI SDK tools and MCP tools/);
+  for (const document of [cascada, casai]) {
+    for (const code of document.querySelectorAll('code.language-cascada, code.language-typescript')) {
+      assert.ok(code.querySelector('.token-keyword'), 'code is highlighted before JavaScript runs');
+      assert.ok(code.querySelector('.token-function'), 'function calls have a distinct syntax color');
+    }
+    assert.doesNotMatch(document.body.textContent, /TextGenerator|headphones\.csc|\{% codeExample/);
+    const ids = [...document.querySelectorAll('[id]')].map(element => element.id);
+    assert.equal(ids.length, new Set(ids).size, 'homepage IDs are unique');
+    for (const link of document.querySelectorAll('a[href^="#"]')) assert.ok(document.getElementById(link.hash.slice(1)), link.href);
+  }
 });

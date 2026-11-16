@@ -1,0 +1,77 @@
+/* All site and demo colors live here. Component styles only reference these tokens. */
+:root {
+  color-scheme: light dark;
+
+  /* Shared palette; Cascada uses these brand defaults. */
+  --brand: light-dark(#b44742, #873a36);
+  --accent: light-dark(#145b94, #7abaff);
+  --brand-deep: #173b5e;
+  --ink: light-dark(#242b2b, #e6edf3);
+  --heading: light-dark(#242b2b, #f3f6fa);
+  --muted: light-dark(#505b59, #aab6c5);
+  --light: light-dark(#edf0ed, #1b2430);
+  --line: light-dark(#dce3de, #354252);
+  --surface: light-dark(#fff, #131b25);
+  --hover-background: light-dark(#e8ede8, #263446);
+  --focus: light-dark(#1768a0, #8cc9ff);
+  --on-brand: #fff;
+  --on-brand-hover: color-mix(in srgb, var(--on-brand) 12%, transparent);
+  --shadow-color: #0001;
+
+  /* Code blocks and syntax highlighting. */
+  --code-background: light-dark(#e9ede9, #192330);
+  --code-ink: light-dark(#303a37, #dce7f1);
+  --code-caption: light-dark(#59655f, #adbacc);
+  --inline-code: light-dark(#873b37, #f0ac9e);
+  --inline-background: light-dark(#eee8e5, #342b2e);
+  --token-keyword: light-dark(#b44742, #f0aaa6);
+  --token-string: light-dark(#145b94, #7abaff);
+  --token-comment: light-dark(#626e66, #9faec0);
+  --token-function: light-dark(#285f92, #9dccff);
+  --token-number: light-dark(#996019, #eec782);
+  --token-delimiter: var(--token-keyword);
+
+  /* Reference controls, badges, and notices. */
+  --selected-background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  --selected-border: color-mix(in srgb, var(--accent) 45%, var(--line));
+  --badge-border: color-mix(in srgb, var(--accent) 18%, transparent);
+  --segment-background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --warning-ink: light-dark(#80501d, #e8c382);
+  --warning-background: light-dark(#fbf3e7, #342c20);
+  --warning-border: light-dark(#ebdec8, #55452d);
+  --notice-border: light-dark(#ac7a39, #d9b678);
+  --notice-background: light-dark(#fbf6ee, #2b281f);
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* Casai's brand overrides; all other colors use the shared palette above. */
+:root[data-site="casai.run"] {
+  --brand: #7d1040;
+  --accent: light-dark(#970747, #f0a6c7);
+  --brand-deep: #1c3350;
+  --inline-code: var(--accent);
+  --inline-background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  --focus: var(--accent);
+}
+
+/* The same standalone workflow demo is embedded by both sites. */
+:root[data-demo="headphones-workflow"] {
+  --ink: light-dark(#151b29, #f0f2f6);
+  --heading: light-dark(#151b29, #f3f6fa);
+  --secondary: light-dark(#576172, #abb4c3);
+  --quiet: light-dark(#7a8492, #828c9d);
+  --rule: light-dark(#d9dee7, #3a4556);
+  --hairline: light-dark(#e9edf2, #303a49);
+  --track: light-dark(#e7ebf0, #303b4b);
+  --pending-disc: light-dark(#aab3c1, #667386);
+  --hover: light-dark(#f4f6f9, #273244);
+  --scrub: light-dark(#1c385b, #88afe5);
+  --focus: light-dark(#1859c9, #8cc9ff);
+  --headphone-ink: var(--surface);
+  --product-1: light-dark(#164a9b, #5a95ed);
+  --product-2: light-dark(#b44742, #df807b);
+  --product-3: light-dark(#173b5e, #60acc8);
+  --product-4: light-dark(#c98800, #e6b44c);
+}
