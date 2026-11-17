@@ -208,7 +208,7 @@ export const componentReference = {
     ...native('doCreateClientSecret', 'VoiceAgentBackend'), input: 'Server-owned instructions, model, session preferences and optional tools.',
     sourceDescriptions: { text: 'Instructions defining how the voice assistant should respond.', 'text-name': 'A file containing instructions for the voice assistant.' },
     resultSummary: 'Client-secret information plus prepared tool definitions.',
-    resultDescription: 'Ordinary calls and run create a short-lived client secret where the model supports it, letting the browser connect without receiving the provider API key. Token, WebRTC and Live capabilities differ by provider. The application server authenticates users, authorizes session creation and tool calls, and supplies matching trusted context; the application owns transport.',
+    resultDescription: 'Ordinary calls and run return a short-lived client secret and prepared tool definitions where the model supports this setup. Pass that setup data to the browser for its provider connection; the provider API key stays on the server. Token, WebRTC and Live capabilities differ by provider. The application server authenticates users, authorizes session creation and tool calls, and supplies matching trusted context; the application owns transport.',
     concepts: ['sources', 'context', 'voice-session', 'tools', 'multimodal-tools', 'media-tool-compatibility', 'inheritance'], call: 'setup(instructions?) or setup(context)', preparedSourceRequired: true,
     variants: [
       { requires: { invocation: ['prepareSession'] }, operation: 'prepareSessionConfig', result: 'VoiceSessionConfig',
@@ -224,7 +224,7 @@ export const componentReference = {
     methods: [
       { name: 'prepareSessionConfig', signature: 'setup.prepareSessionConfig(settings?)', description: 'Prepares instructions and tool definitions without opening a provider session. Empty tool definitions are omitted.', settings: 'run', omit: ['expiresAfterSeconds'], resultShape: 'SessionConfig' },
       { name: 'createWebRTCSession', signature: 'setup.createWebRTCSession({ sdp, ...settings })', description: 'Answers a browser SDP offer using the configured model.', settings: 'run', omit: ['expiresAfterSeconds'], properties: ['sdp'], resultShape: 'VoiceWebRTC_result' },
-      { name: 'executeTool', signature: 'setup.executeTool({ toolCallId, toolName, args }, { toolsContext?, abortSignal? }?)', description: 'Validates and executes a registered tool with the real call metadata. Returns the tool execution value without language-model toModelOutput formatting. Applications own HTTP transport and map undefined results to JSON null.', properties: ['toolCallId', 'toolName', 'args', 'toolsContext', 'abortSignal'] },
+      { name: 'executeTool', signature: 'setup.executeTool({ toolCallId, toolName, args }, { toolsContext?, abortSignal? }?)', description: 'Validates and executes a registered server tool with the real call metadata and trusted context. Returns the tool execution value without language-model toModelOutput formatting. Applications own HTTP transport and map undefined results to JSON null.', properties: ['toolCallId', 'toolName', 'args', 'toolsContext', 'abortSignal'] },
     ],
   },
 };

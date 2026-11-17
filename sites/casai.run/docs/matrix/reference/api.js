@@ -6,7 +6,7 @@ export default {
     "ai": "7.0.162",
     "@ai-sdk/provider-utils": "5.0.74",
     "@ai-sdk/provider": "4.0.35",
-    "cascada-engine": "0.6.2"
+    "cascada-engine": "0.7.0"
   },
   "definitions": {
     "Template": {
@@ -1865,7 +1865,7 @@ export default {
       "headers-1c3aaeb2734c",
       "model-93d3f90bcfb6",
       "telemetry-237457941031",
-      "inputAudioFormat-7e0e83a62aca",
+      "inputAudioFormat-a530ffc7dab7",
       "audio-c563898406e8",
       "filters-e21828790709",
       "renderOptions-0b6a6f477332",
@@ -1912,7 +1912,7 @@ export default {
       "model-e7347b132223",
       "onError-50a850676fc2",
       "voice-a24507351f00",
-      "outputFormat-1c52617eb72c",
+      "outputFormat-27a92d87c4ab",
       "speed-38cf774e7d2f",
       "language-17c4c3804341",
       "text-85a9dc177766",
@@ -10572,6 +10572,16 @@ export default {
       "optional": true,
       "description": "",
       "tags": []
+    },
+    "outputFormat-27a92d87c4ab": {
+      "name": "outputFormat",
+      "type": "SharedV4AudioFormat",
+      "optional": false,
+      "description": "The desired format of the output audio chunks, e.g.\n`{ type: 'audio/pcm', rate: 24000 }` or `{ type: 'audio/mpeg' }`.\nSupported formats are provider-specific.",
+      "tags": [],
+      "source": {
+        "path": "src/factories/SpeechGenerator.ts"
+      }
     },
     "outputFormat-6e087775d340": {
       "name": "outputFormat",
