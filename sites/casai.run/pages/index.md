@@ -31,11 +31,7 @@ description: Build AI agents and workflows in JavaScript and TypeScript. Compose
 
 AI agents spend most of their time waiting. They wait for models, tools, web pages, APIs and databases - sometimes for seconds, even minutes.
 
-[CascadaScript](https://cascada.dev/cascada-script/) is a simple language familiar to JavaScript and Python developers. Use your usual programming toolbox - conditions, loops, functions and more - without wiring a graph.
-
-You write normal, sequential code. [Cascada](https://cascada.dev), the engine behind [CascadaScript](https://cascada.dev/cascada-script/), follows logical dependencies and runs independent operations concurrently. You get the results of sequential execution with less time spent waiting.
-
-[See a workflow in action ↓](#concurrency)
+Casai makes AI workflows easier to write and faster to run with [CascadaScript](https://cascada.dev/cascada-script/) - a simple scripting language, instantly familiar to JavaScript and Python developers. You express your workflow in normal, sequential code, without wiring up a graph. Under the hood, the runtime follows logical dependencies to run all independent operations concurrently, starting each as soon as its inputs are ready. The results are identical to sequential execution, but your workflow can finish much faster. ([See a workflow in action ↓](#concurrency))
 
 ### Components {id="why-components-title"}
 
@@ -51,16 +47,14 @@ Agents, templates, scripts and your own functions share a [consistent interface]
 
 ## Write the workflow.<br> Let Cascada handle the concurrency. {id="orchestration-title"}
 
-Define components in JavaScript or TypeScript. Connect them with [CascadaScript](https://cascada.dev/cascada-script/).
+Define components in JavaScript or TypeScript. Combine them with your own APIs and libraries in [CascadaScript](https://cascada.dev/cascada-script/).
 {.lead}
 
-Call your own APIs and libraries alongside Casai components.
+The example is normal, sequential code. Specs, reviews and price are fetched concurrently, and the summary starts as soon as all three are ready.
 
-In the example, specs, reviews and price are fetched concurrently. The summary starts as soon as all three are ready.
+**No `async`, no `await`, no juggling promises inside your script.** [Cascada](https://cascada.dev), the runtime behind [CascadaScript](https://cascada.dev/cascada-script/), follows the logical dependencies in your code. Everything that can run concurrently, does.
 
-**No `async`, no `await`, no juggling promises inside your script.** Cascada follows the logical dependencies in your code. Everything that can run concurrently, does.
-
-Operations can finish in any order, but **Cascada assembles their outputs exactly as if the script had run sequentially** - with less time spent waiting.
+Operations can finish in any order, but **their outputs are assembled exactly as if the script had run sequentially**.
 
 </div>
 <figure class="code-panel">
@@ -92,9 +86,9 @@ return summarizeProduct({
 Configure once. Call with new inputs. Reuse across workflows.
 {.lead}
 
-Mix AI agents, templates, scripts and your own functions through one familiar interface. Use templates or code to turn your application's data into the prompts and inputs each component needs.
+Use AI agents, templates, scripts and your own functions through one familiar interface. A template, script or function can turn your data into the prompts and inputs each component needs.
 
-Keep a component's inputs and results consistent, and you can change how it works without rewriting the workflow.
+Share models, tools and defaults with [`Config`](/documentation/quick-reference/config/#component-factories), then customize each component. Keep inputs and returned values compatible, and you can swap an implementation without rewriting the workflow.
 
 </div>
 {{ casaiSimpleMatrix | safe }}
@@ -104,9 +98,9 @@ Keep a component's inputs and results consistent, and you can change how it work
 
 ### Turn a component into a tool
 
-Almost any component can become a tool. Add [`.asTool`](/documentation/quick-reference/llmagent_withtemplate_astool/#component-factories), describe its task and declare its inputs with [`inputSchema`](/documentation/quick-reference/llmagent_withtemplate_astool/?options=withTemplate%2CasTool&view=config#property-inputSchema). A [template](https://cascada.dev/cascada-template/), script or function can turn those inputs into the prompt or other data the component needs.
+Let an agent delegate work to almost any component. Add [`.asTool`](/documentation/quick-reference/llmagent_withtemplate_astool/#component-factories), describe its task and declare its arguments with [`inputSchema`](/documentation/quick-reference/llmagent_withtemplate_astool/?options=withTemplate%2CasTool&view=config#property-inputSchema). A [template](https://cascada.dev/cascada-template/), script or function turns those arguments into the prompt or other input the component needs. It remains callable directly from your code.
 
-Here, an agent uses a page summarizer to read a URL without adding the whole page to its conversation.
+Here, a research agent calls a page summarizer and receives a short summary, keeping the full page text out of its conversation.
 
 Use these tools alongside [AI SDK tools](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling) and [MCP tools](https://ai-sdk.dev/docs/ai-sdk-core/mcp-tools) in [`LLMAgent`](/documentation/quick-reference/llmagent/#component-factories), [`Template`](/documentation/quick-reference/template/#component-factories), [`Script`](/documentation/quick-reference/script/#component-factories), [`Function`](/documentation/quick-reference/function/#component-factories) and [`VoiceAgentBackend`](/documentation/quick-reference/voiceagentbackend/#component-factories), or while preparing another component's inputs.
 
@@ -126,10 +120,10 @@ Use these tools alongside [AI SDK tools](https://ai-sdk.dev/docs/ai-sdk-core/too
 
 ## Start sooner.<br> Use results as they arrive. {id="concurrency-title"}
 
-Streaming works with normal, sequential code too.
+Process the first result while the rest are still arriving, using normal, sequential code.
 {.lead}
 
-A regular `for` loop can process a stream. Each item starts moving through the workflow as soon as it arrives, while more are still on their way. Independent iterations run concurrently, and the collected results keep their original order.
+A regular `for` loop processes each streamed item as it arrives. Independent iterations run concurrently, while collected results keep their original order.
 
 In the example, one agent streams four headphone suggestions, your APIs fetch the details, and another agent summarizes each product.
 
@@ -141,7 +135,7 @@ In the example, one agent streams four headphone suggestions, your APIs fetch th
 
 2. ### Fetch specs, reviews and prices, then summarize
 
-   Specs, reviews and prices run concurrently, across products too. Each summary waits only for its own inputs.
+   Those lookups run concurrently, across products too. Each summary waits only for its own inputs.
 
 3. ### Return summaries in the original order
 
@@ -153,7 +147,7 @@ In the example, one agent streams four headphone suggestions, your APIs fetch th
 The demo illustrates the timing; the code tabs show the workflow and its components. Connect the example to your own product APIs.
 {.example-note}
 
-Streaming also lets you display generated text or play supported audio as it arrives. A step that needs a complete result waits for completion.
+Your app can also display generated text or play supported audio as it arrives. Steps that need the whole result wait for the stream to finish.
 
 </div>
 <div class="example-tabs casai-examples">
@@ -201,7 +195,7 @@ npm install casai ai zod @ai-sdk/openai
 
 </figure>
 
-Create a reusable summarizer, pass it a document, and read the output. Then call it from [CascadaScript](https://cascada.dev/cascada-script/), combine it with your APIs, or expose it as a tool.
+This component turns a document into a one-sentence summary. Reuse it in [CascadaScript](https://cascada.dev/cascada-script/), combine it with your APIs, or expose it as a tool.
 
 <div class="home-actions"><a class="home-button" href="https://github.com/geleto/casai#readme">Continue with the guide <span aria-hidden="true">↗</span></a><a href="/documentation/quick-reference/#component-factories">Explore the reference <span aria-hidden="true">→</span></a></div>
 
