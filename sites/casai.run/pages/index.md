@@ -88,7 +88,7 @@ Configure once. Call with new inputs. Reuse across workflows.
 
 Use AI agents, templates, scripts and your own functions through one familiar interface. A template, script or function can turn your data into the prompts and inputs each component needs.
 
-Share models, tools and defaults with [`Config`](/documentation/quick-reference/config/#component-factories), then customize each component. Keep inputs and returned values compatible, and you can swap an implementation without rewriting the workflow.
+Share models, tools and defaults with [`Config`](/documentation/reference/config/#component-factories), then customize each component. Keep inputs and returned values compatible, and you can swap an implementation without rewriting the workflow.
 
 </div>
 {{ casaiSimpleMatrix | safe }}
@@ -98,13 +98,13 @@ Share models, tools and defaults with [`Config`](/documentation/quick-reference/
 
 ### Turn a component into a tool
 
-Let an agent delegate work to almost any component. Add [`.asTool`](/documentation/quick-reference/llmagent_withtemplate_astool/#component-factories), describe its task and declare its arguments with [`inputSchema`](/documentation/quick-reference/llmagent_withtemplate_astool/?options=withTemplate%2CasTool&view=config#property-inputSchema). A [template](https://cascada.dev/cascada-template/), script or function turns those arguments into the prompt or other input the component needs. It remains callable directly from your code.
+Let an agent delegate work to almost any component. Add [`.asTool`](/documentation/reference/llmagent_withtemplate_astool/#component-factories), describe its task and declare its arguments with [`inputSchema`](/documentation/reference/llmagent_withtemplate_astool/?options=withTemplate%2CasTool&view=config#property-inputSchema). A [template](https://cascada.dev/cascada-template/), script or function turns those arguments into the prompt or other input the component needs. It remains callable directly from your code.
 
 Here, a research agent calls a page summarizer and receives a short summary, keeping the full page text out of its conversation.
 
-Use these tools alongside [AI SDK tools](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling) and [MCP tools](https://ai-sdk.dev/docs/ai-sdk-core/mcp-tools) in [`LLMAgent`](/documentation/quick-reference/llmagent/#component-factories), [`Template`](/documentation/quick-reference/template/#component-factories), [`Script`](/documentation/quick-reference/script/#component-factories), [`Function`](/documentation/quick-reference/function/#component-factories) and [`VoiceAgentBackend`](/documentation/quick-reference/voiceagentbackend/#component-factories), or while preparing another component's inputs.
+Use these tools alongside [AI SDK tools](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling) and [MCP tools](https://ai-sdk.dev/docs/ai-sdk-core/mcp-tools) in [`LLMAgent`](/documentation/reference/llmagent/#component-factories), [`Template`](/documentation/reference/template/#component-factories), [`Script`](/documentation/reference/script/#component-factories), [`Function`](/documentation/reference/function/#component-factories) and [`VoiceAgentBackend`](/documentation/reference/voiceagentbackend/#component-factories), or while preparing another component's inputs.
 
-[Explore components and tools →](/documentation/quick-reference/)
+[Explore components and tools →](/documentation/reference/)
 
 </div>
 
@@ -190,14 +190,15 @@ Install Casai and a model provider. This example uses [OpenAI](https://ai-sdk.de
 <figcaption><span>Install</span><button class="copy-button" type="button" aria-label="Copy Casai install command" hidden>Copy</button></figcaption>
 
 ```sh {tabindex="0" aria-label="Install Casai and the OpenAI provider"}
-npm install casai ai zod @ai-sdk/openai
+npm install casai ai@7 zod@4
+npm install @ai-sdk/openai@4
 ```
 
 </figure>
 
 This component turns a document into a one-sentence summary. Reuse it in [CascadaScript](https://cascada.dev/cascada-script/), combine it with your APIs, or expose it as a tool.
 
-<div class="home-actions"><a class="home-button" href="https://github.com/geleto/casai#readme">Continue with the guide <span aria-hidden="true">↗</span></a><a href="/documentation/quick-reference/#component-factories">Explore the reference <span aria-hidden="true">→</span></a></div>
+<div class="home-actions"><a class="home-button" href="/documentation/reference/#guide-first-workflow">Continue with the documentation <span aria-hidden="true">↗</span></a><a href="/documentation/reference/#component-factories">Explore the reference <span aria-hidden="true">→</span></a></div>
 
 </div>
 

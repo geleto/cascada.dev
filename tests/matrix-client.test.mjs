@@ -13,13 +13,21 @@ const renderer = createRenderer(provenance);
 const markdown = new MarkdownIt({ html: false });
 const bundle = await build({ entryPoints: ['sites/casai.run/reference/client.mjs'], bundle: true, write: false, format: 'iife', platform: 'browser', define: { 'import.meta.url': '"https://casai.run/reference-assets/quick-reference.js"' } });
 
-async function setup(t, { component = 'LLMAgent', options = [], query = '' } = {}) {
-  const html = renderer.shell(describe(component, options), await render(component, options));
-  const dom = new JSDOM(`<html><head><title>Quick reference</title><link rel="canonical" href="https://casai.run/documentation/quick-reference/"></head><body>${html}</body></html>`, { url: `https://casai.run/documentation/quick-reference/${component.toLowerCase()}/${query}`, runScripts: 'outside-only', pretendToBeVisual: true });
+async function setup(t, { component = 'LLMAgent', options = [], query = '', initialComponent = component, url = `https://casai.run/documentation/reference/${component.toLowerCase()}/${query}` } = {}) {
+  const html = renderer.shell(describe(initialComponent, options), await render(initialComponent, options));
+  const dom = new JSDOM(`<html><head><title>Quick reference</title><link rel="canonical" href="https://casai.run/documentation/reference/"></head><body>${html}</body></html>`, { url, runScripts: 'outside-only', pretendToBeVisual: true });
   const { window } = dom;
   window.HTMLElement.prototype.scrollIntoView = function () { this.dataset.scrolled = 'true'; };
   let copied;
   Object.defineProperty(window.navigator, 'clipboard', { value: { writeText: async text => { copied = text; } } });
+  const blobs = new Map(), downloads = [];
+  window.URL.createObjectURL = blob => { const url = `blob:test-${blobs.size}`; blobs.set(url, blob); return url; };
+  window.URL.revokeObjectURL = () => {};
+  const anchorClick = window.HTMLAnchorElement.prototype.click;
+  window.HTMLAnchorElement.prototype.click = function () {
+    if (this.download) downloads.push({ name: this.download, blob: blobs.get(this.href) });
+    else anchorClick.call(this);
+  };
   window.eval(bundle.outputFiles[0].text);
   const settle = async () => { await new Promise(resolve => setTimeout(resolve, 30)); };
   await settle();
@@ -33,8 +41,31 @@ async function setup(t, { component = 'LLMAgent', options = [], query = '' } = {
     element.dispatchEvent(new window.Event('change', { bubbles: true })); await settle();
   };
   const input = (selector, value) => { $(selector).value = value; $(selector).dispatchEvent(new window.Event('input', { bubbles: true })); };
-  return { window, $, click, change, input, settle, copied: () => copied };
+  const downloadedText = async index => new Promise((resolve, reject) => {
+    const reader = new window.FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject;
+    reader.readAsText(downloads[index].blob);
+  });
+  return { window, $, click, change, input, settle, copied: () => copied, downloads, downloadedText };
 }
+
+test('one shared page restores a different form, deep anchor and generated JSON download from its URL', async t => {
+  const ui = await setup(t, { initialComponent: 'LLMAgent', url: 'https://casai.run/documentation/reference/translator_asstream/?view=config&download=json#property-model' });
+  assert.match(ui.$('#component-title').textContent, /Translator\.asStream/);
+  assert.equal(ui.$('#property-model').open, true);
+  assert.equal(ui.window.location.pathname, '/documentation/reference/translator_asstream/');
+  assert.equal(ui.window.location.hash, '#property-model');
+  assert.equal(ui.window.location.search, '?view=config');
+  assert.equal(ui.$('link[rel="canonical"]').href, 'https://casai.run/documentation/reference/');
+  assert.equal(ui.downloads.length, 1);
+  const exported = JSON.parse(await ui.downloadedText(0));
+  assert.equal(exported.schemaVersion, 3);
+  assert.deepEqual(exported.reference, JSON.parse(JSON.stringify(describe('Translator', ['asStream']))));
+  assert.deepEqual(exported.example, JSON.parse(JSON.stringify(await render('Translator', ['asStream']))));
+  await ui.click('[data-view="notes"]');
+  assert.equal(ui.downloads.length, 1, 'navigation does not repeat an automatic download');
+  await ui.click('[data-export="md"]');
+  assert.equal(await ui.downloadedText(1), renderer.toMarkdown(describe('Translator', ['asStream']), await render('Translator', ['asStream'])));
+});
 
 test('the shared introduction stays separate from component navigation', async t => {
   const ui = await setup(t);
@@ -57,7 +88,7 @@ test('intro component links select the named form and scroll to the matrix', { t
     ['config', 'Config', 'Config', false],
   ];
   for (const [route, component, factory, streaming] of cases) {
-    const path = `/documentation/quick-reference/${route}/`;
+    const path = `/documentation/reference/${route}/`;
     const heading = ui.$('#component-factories');
     const scrolled = new Promise(resolve => { heading.scrollIntoView = resolve; });
     await ui.click(`.ref-introduction a[href="${path}#component-factories"]`);
@@ -81,7 +112,7 @@ test('intro source-property links select the component and open its configuratio
   const ui = await setup(t, { options: ['asTool', 'withTemplate'] });
   const cases = [['LLMAgent', 'prompt'], ['Embedder', 'input'], ['Reranker', 'query'], ['SpeechGenerator', 'text'], ['Transcriber', 'audio']];
   for (const [component, property] of cases) {
-    const href = `/documentation/quick-reference/${component.toLowerCase()}/?view=config#property-${property}`;
+    const href = `/documentation/reference/${component.toLowerCase()}/?view=config#property-${property}`;
     const scrolled = new Promise(resolve => {
       ui.window.HTMLElement.prototype.scrollIntoView = function () { if (this.id === `property-${property}`) resolve(); };
     });
@@ -94,7 +125,7 @@ test('intro source-property links select the component and open its configuratio
     assert.equal(ui.$('#config').hidden, false);
     assert.equal(ui.$(`#property-${property}`).open, true);
     assert.equal(ui.$(`#property-${property}`).hidden, false);
-    assert.equal(ui.window.location.pathname, `/documentation/quick-reference/${component.toLowerCase()}/`);
+    assert.equal(ui.window.location.pathname, `/documentation/reference/${component.toLowerCase()}/`);
     assert.equal(ui.window.location.search, '?view=config');
     assert.equal(ui.window.location.hash, `#property-${property}`);
   }
@@ -220,7 +251,7 @@ test('shorthand is checked by default and toggles named calls without changing s
   assert.match(checkbox().closest('label').title, /component\(input\).*component\.run/);
   assert.match(ui.$('#example').textContent, /await findPolicy\('How do I replace a damaged mug\?'\)/);
   await ui.change('[data-choice="run"]', false);
-  assert.match(ui.$('#example').textContent, /await findPolicy\.run\(\{ query:/);
+  assert.match(ui.$('#example').textContent, /await findPolicy\.run\(\s*\{ query:/);
   assert.equal(new URL(ui.window.location.href).searchParams.get('options'), 'run');
   assert.equal(ui.window.document.activeElement.dataset.choice, 'run');
   const restored = await setup(t, { component: 'Reranker', query: ui.window.location.search });
@@ -230,7 +261,7 @@ test('shorthand is checked by default and toggles named calls without changing s
   assert.doesNotMatch(ui.$('#example').textContent, /await findPolicy\.run/);
   assert.equal(new URL(ui.window.location.href).searchParams.has('options'), false);
   await followMethod('run');
-  assert.match(ui.$('#example').textContent, /await findPolicy\.run\(\{ query:/);
+  assert.match(ui.$('#example').textContent, /await findPolicy\.run\(\s*\{ query:/);
   await followMethod('run'); // Reopening the docs must keep the named call selected.
   await followMethod('call');
   assert.match(ui.$('#example').textContent, /await findPolicy\('How do I replace a damaged mug\?'\)/);

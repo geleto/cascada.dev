@@ -1,15 +1,34 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, posix, resolve } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import SftpClient from 'ssh2-sftp-client';
 import { projectRoot } from './sites.mjs';
+import { planUploads } from './publish-files.mjs';
+import { redactPublishError } from './publish-env.mjs';
+
+const retryDelays = [1000, 2000, 4000];
+const connectionErrors = new Set(['ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT', 'EPIPE', 'EAI_AGAIN', 'ENETUNREACH', 'EHOSTUNREACH', 'ERR_NOT_CONNECTED', '6', '7']);
+
+function lostConnection(error) {
+  return connectionErrors.has(String(error.code)) || (error.code === 'ERR_GENERIC_CLIENT'
+    && /Unexpected (?:close|end) event|No SFTP connection|(?:Timeout|Timed out).*handshake/i.test(error.message));
+}
+
+function ambiguousMkdirFailure(error) {
+  // ssh2-sftp-client maps SFTP status 4 (generic failure) to this misleading
+  // message. Actual permission-denied status 3 is different and is not retried.
+  return error.code === 'ERR_BAD_PATH' && /_doMkdir: Bad path: .* permission denied$/.test(error.message);
+}
 
 // SFTP connection, SSH host key verification, and recursive static-site uploads.
 export class SftpPublishClient {
-  constructor({ client = new SftpClient(), keyDirectory = resolve(projectRoot, '.cache/sftp-host-keys'), log = console.log } = {}) {
-    this.client = client;
+  constructor({ client, createClient = () => new SftpClient(), keyDirectory = resolve(projectRoot, '.cache/sftp-host-keys'), log = console.log, sleep = delay } = {}) {
+    this.client = client || createClient();
+    this.createClient = createClient;
     this.keyDirectory = keyDirectory;
     this.log = log;
+    this.sleep = sleep;
   }
 
   async access({ host, port, user, password, hostKey }) {
@@ -51,6 +70,47 @@ export class SftpPublishClient {
       }
     }
     this.directory = await this.client.cwd();
+    // Pin reconnects to the verified key even if the local key cache changes.
+    this.connection = { host, port, user, password, hostKey: observed };
+  }
+
+  async reconnect(destination) {
+    const connection = this.connection;
+    await this.client.end().catch(() => {});
+    this.client = this.createClient();
+    await this.access(connection);
+    if (destination === this.directory || await this.client.exists(destination) !== 'd'
+      || await this.client.realPath(destination) !== destination) {
+      throw new Error(`SFTP destination changed or is no longer a safe website directory: ${destination}`);
+    }
+    this.directory = destination;
+  }
+
+  async retry(operation, action) {
+    const destination = this.directory;
+    let reconnect = false;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        if (reconnect) await this.reconnect(destination);
+        reconnect = false;
+        return await action(attempt);
+      } catch (error) {
+        const retryable = lostConnection(error) || Number(error.code) === 4 || ambiguousMkdirFailure(error);
+        if (!retryable) throw error;
+        const message = redactPublishError(error, [this.connection?.password]);
+        if (attempt === retryDelays.length) {
+          const hint = lostConnection(error) ? 'Check the SFTP connection and host availability.'
+            : 'Check hosting permissions and disk/file quotas if this persists; the server may report these as a generic failure.';
+          throw new Error(`${operation} failed after ${attempt + 1} attempts: ${message}. ${hint}`, { cause: error });
+        }
+        // Keep reconnecting if destination validation failed after connecting:
+        // access() has temporarily selected the account root at that point.
+        reconnect ||= lostConnection(error);
+        const wait = retryDelays[attempt];
+        this.log(`${operation} failed: ${message}. Retrying in ${wait / 1000}s (attempt ${attempt + 2}/${retryDelays.length + 1})${reconnect ? ' with a new SFTP connection' : ''}.`);
+        await this.sleep(wait);
+      }
+    }
   }
 
   async pwd() { return this.directory; }
@@ -63,28 +123,52 @@ export class SftpPublishClient {
 
   async list() { return this.client.list(this.directory); }
 
-  async uploadFromDir(directory) {
-    const visit = async (local, remote) => {
-      for (const entry of await readdir(local, { withFileTypes: true })) {
-        const source = join(local, entry.name);
-        const target = posix.join(remote, entry.name);
-        const type = await this.client.exists(target);
-        if (entry.isDirectory()) {
-          if (type && type !== 'd') throw new Error(`Refusing to upload through a remote link or non-directory: ${target}`);
-          if (!type) await this.client.mkdir(target);
-          await visit(source, target);
-        } else if (entry.isFile()) {
-          if (type && type !== '-') throw new Error(`Refusing to overwrite a remote link or non-file: ${target}`);
-          // Streaming put works with servers that do not support fastPut's
-          // concurrent writes. Existing unrelated remote files remain intact.
-          await this.client.put(source, target);
-        } else {
-          throw new Error('The build output must contain only regular files and directories.');
-        }
-      }
-    };
-    await visit(directory, this.directory);
+  async readRemoteFile(path) {
+    const target = posix.join(this.directory, path);
+    return this.retry(`Reading ${path}`, async () => {
+      const type = await this.client.exists(target);
+      if (!type) return null;
+      if (type !== '-') throw new Error(`Refusing to read a remote link or non-file: ${target}`);
+      // concat-stream can return [] for an empty remote file. Keep the public
+      // read contract binary, including files truncated by a failed upload.
+      return Buffer.from(await this.client.get(target));
+    });
   }
 
-  async close() { await this.client.end(); }
+  async uploadFiles(directory, files) {
+    const checked = new Set();
+    for (const file of files) {
+      const upload = async (attempt = 0) => {
+        // A failed mkdir may have succeeded remotely, or a path may have changed
+        // during the delay. Recheck paths before retrying the current file.
+        if (attempt) checked.clear();
+        let parent = this.directory;
+        for (const part of file.split('/').slice(0, -1)) {
+          parent = posix.join(parent, part);
+          if (checked.has(parent)) continue;
+          const type = await this.client.exists(parent);
+          if (type && type !== 'd') throw new Error(`Refusing to upload through a remote link or non-directory: ${parent}`);
+          if (!type) await this.client.mkdir(parent);
+          checked.add(parent);
+        }
+        const target = posix.join(this.directory, file);
+        const type = await this.client.exists(target);
+        if (type && type !== '-') throw new Error(`Refusing to overwrite a remote link or non-file: ${target}`);
+        await this.client.put(join(directory, file), target);
+      };
+      // A routing write needs a fresh baseline review after an uncertain result.
+      // Do not retry it underneath the publisher's routing guard.
+      if (file === '.htaccess') await upload();
+      else await this.retry(`Uploading ${file}`, upload);
+    }
+  }
+
+  async uploadFromDir(directory) {
+    for (const phase of await planUploads(directory)) await this.uploadFiles(directory, phase.files);
+  }
+
+  async close() {
+    this.connection = undefined;
+    await this.client.end();
+  }
 }

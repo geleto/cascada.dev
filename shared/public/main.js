@@ -68,8 +68,10 @@ navigation.addEventListener('keydown', (event) => {
 });
 
 // Native details keeps the static docs index usable without JavaScript too.
-const docsIndex = document.querySelector('.docs-index');
-if (docsIndex) {
+function enhanceDocumentationIndex() {
+  const docsIndex = document.querySelector('.docs-index:not([data-index-enhanced])');
+  if (!docsIndex) return;
+  docsIndex.dataset.indexEnhanced = 'true';
   const compactDocs = window.matchMedia('(max-width: 760px)');
   const resizeIndex = () => { docsIndex.open = !compactDocs.matches; };
   resizeIndex();
@@ -131,6 +133,8 @@ if (docsIndex) {
   docsIndex.addEventListener('toggle', () => queueIndexUpdate(true));
   queueIndexUpdate(true);
 }
+enhanceDocumentationIndex();
+document.addEventListener('documentation:loaded', enhanceDocumentationIndex);
 
 // Reuse the original example so all views always show exactly the same code.
 document.querySelectorAll('[data-code-source]').forEach((code) => {
@@ -139,6 +143,7 @@ document.querySelectorAll('[data-code-source]').forEach((code) => {
 
 // Highlight text nodes rather than parsing HTML or loading a third-party script.
 document.querySelectorAll('pre code').forEach((code) => {
+  if (code.querySelector('[class^="token-"]')) return;
   const source = code.textContent;
   const fragment = document.createDocumentFragment();
   const language = [...code.classList].find(name => name.startsWith('language-'))?.slice(9);

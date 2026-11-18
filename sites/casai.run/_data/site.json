@@ -5,13 +5,16 @@
   "author": "Angel Popov",
   "themeStorageKey": "casai-theme",
   "github": "https://github.com/geleto/casai",
-  "blog": false,
+  "blog": true,
+  "blogDescription": "Practical articles on concurrent AI workflows, reusable components and tools with Casai.",
   "navigation": [
     { "title": "Get started", "url": "/#get-started" },
     { "title": "Documentation", "url": "/documentation/" },
+    { "title": "Blog", "url": "/blog/" },
     { "title": "Cascada", "url": "https://cascada.dev" }
   ],
   "footerNavigation": [
+    { "title": "Blog", "url": "/blog/" },
     { "title": "GitHub", "url": "https://github.com/geleto/casai" },
     { "title": "Cascada", "url": "https://cascada.dev" }
   ]

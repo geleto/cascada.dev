@@ -1,0 +1,10 @@
+# Preserve suffixes and query strings. Location has no fragment, so browsers
+# retain the original target. This rule applies equally to people and crawlers.
+RedirectMatch 301 ^/documentation/quick-reference(?:/(.*))?$ /documentation/reference/$1
+
+# The HTML is the preferred search representation of the complete Markdown.
+<IfModule mod_headers.c>
+  <Files "documentation.md">
+    Header set Link "<https://casai.run/documentation/reference/all/>; rel=\"canonical\""
+  </Files>
+</IfModule>

@@ -1,6 +1,6 @@
 import { components, normalizeOptions, referenceSelection } from '../docs/matrix/matrix.js';
 
-export const basePath = '/documentation/quick-reference/';
+export const basePath = '/documentation/reference/';
 export const viewTitles = { example: 'Example', config: 'Config', sources: 'Source modes', return: 'Return', notes: 'Notes' };
 export const views = Object.keys(viewTitles);
 export const hasReturnReference = reference => reference.result.shapes.some(shape => shape.properties.length) || reference.result.additionalProperties.length > 0;

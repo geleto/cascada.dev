@@ -1,5 +1,6 @@
 import { posix } from 'node:path';
 import { createMarkdownRenderer } from './markdown.mjs';
+import { highlight } from '../shared/public/syntax.mjs';
 
 const markdown = createMarkdownRenderer();
 const escapeHtml = markdown.utils.escapeHtml;
@@ -16,6 +17,7 @@ function slugifyHeading(value, counts) {
 }
 
 function localLink(href, revision, options) {
+  if (options.resolveLink) return options.resolveLink(href);
   // These two source links retain punctuation that the original generator stripped.
   if (href === '#sequential-execution-with-' || href === '#repairing-sequential-paths-with-') return href.slice(0, -1);
   const { repository, directory, documents = {}, linkAliases = {} } = options;
@@ -65,19 +67,44 @@ export function renderDocumentation(source, revision = 'master', options = {}) {
   const tokens = markdown.parse(source.replace(/^#\s+.+\r?\n/, ''), {});
   const headings = [];
   const counts = new Map();
+  const ids = new Set();
+  const anchorMarker = /^\s*<a\s+id="([\w-]+)"(?:\s+name="\1")?\s*><\/a>\s*$/;
+  const reserved = new Set(options.explicitAnchors ? tokens.map(token => anchorMarker.exec(token.content)?.[1]).filter(Boolean) : []);
   for (let index = 0; index < tokens.length; index++) {
     const token = tokens[index];
     if (token.type === 'heading_open') {
       const inline = tokens[index + 1];
-      const slug = slugifyHeading(inline.content, counts);
+      const previous = tokens[index - 1];
+      const markerToken = previous?.type === 'html_block' ? previous
+        : previous?.type === 'paragraph_close' && tokens[index - 2]?.type === 'inline' ? tokens[index - 2] : null;
+      const marker = options.explicitAnchors && markerToken && anchorMarker.exec(markerToken.content);
+      let slug = marker ? marker[1] : (options.anchorPrefix || '') + slugifyHeading(inline.content, counts);
+      if (!marker && options.explicitAnchors) {
+        const base = slug; let suffix = 1;
+        while (ids.has(slug) || reserved.has(slug)) slug = `${base}-${suffix++}`;
+      }
+      if (marker) {
+        markerToken.content = '';
+        if (markerToken.type === 'inline') {
+          markerToken.children = [];
+          tokens[index - 3].hidden = true;
+          previous.hidden = true;
+        }
+      }
+      if (options.explicitAnchors && ids.has(slug)) throw new Error(`Duplicate documentation anchor: ${slug}`);
+      ids.add(slug);
       token.attrSet('id', slug);
       headings.push({ level: Number(token.tag.slice(1)), slug,
         text: plainText(markdown.renderer.renderInline(inline.children, markdown.options, {})) });
     }
     for (const child of token.children || []) {
-      if (child.type === 'link_open') child.attrSet('href', localLink(child.attrGet('href'), revision, options));
+      if (child.type === 'link_open') {
+        const href = localLink(child.attrGet('href'), revision, options);
+        child.attrSet('href', href);
+        if (options.isReferenceLink?.(href)) child.attrSet('data-reference-link', '');
+      }
       if (child.type === 'image') child.attrSet('src', localLink(child.attrGet('src'), revision, options));
     }
   }
-  return { html: markdown.renderer.render(tokens, markdown.options, {}), index: buildSidebar(headings), headings };
+  return { html: markdown.renderer.render(tokens, options.highlight ? { ...markdown.options, highlight } : markdown.options, {}), index: buildSidebar(headings), headings };
 }

@@ -1,10 +1,12 @@
-import { readdir, stat } from 'node:fs/promises';
-import { join, posix, resolve } from 'node:path';
+import { posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSiteArgs, projectRoot } from './sites.mjs';
 import { buildSites } from './build.mjs';
 import { loadPublishEnvironment, redactPublishError } from './publish-env.mjs';
 import { SftpPublishClient } from './publish-sftp.mjs';
+import { planUploads, describeUploads } from './publish-files.mjs';
+import { routingGuard } from './publish-config.mjs';
+import { verifyReferenceRelease } from './verify-reference.mjs';
 
 export function getPublishConfig(env, site) {
   const required = (key) => {
@@ -29,26 +31,13 @@ export function getPublishConfig(env, site) {
 }
 
 export async function inspectBuild(directory) {
-  if (!(await stat(join(directory, 'index.html'))).isFile()) throw new Error('Build output is missing index.html. Run npm run build first.');
-  let files = 0;
-  async function visit(path) {
-    for (const entry of await readdir(path, { withFileTypes: true })) {
-      if (/^\.env(?:\.|$)/i.test(entry.name) || ['.git', 'node_modules'].includes(entry.name.toLowerCase())) {
-        throw new Error(`Refusing to publish a build containing ${entry.name}.`);
-      }
-      if (entry.isSymbolicLink()) throw new Error('Refusing to follow a symbolic link in the build output.');
-      if (entry.isDirectory()) await visit(join(path, entry.name));
-      else if (entry.isFile()) files += 1;
-      else throw new Error('The build output must contain only regular files and directories.');
-    }
-  }
-  await visit(directory);
-  return files;
+  return (await planUploads(directory)).reduce((sum, phase) => sum + phase.files.length, 0);
 }
 
-export async function publishSite({ config, directory, client, checkOnly = false, log = console.log }) {
+export async function publishSite({ config, directory, client, checkOnly = false, log = console.log, uploadPlan, stateDirectory, reviewedConfigHash }) {
   try {
-    const files = await inspectBuild(directory);
+    const phases = uploadPlan || await planUploads(directory);
+    const files = phases.reduce((sum, phase) => sum + phase.files.length, 0);
     const { remoteDir, ...connection } = config;
     log(`Connecting to ${config.host}:${config.port} using SFTP (SSH).`);
     await client.access(connection);
@@ -60,13 +49,26 @@ export async function publishSite({ config, directory, client, checkOnly = false
       throw new Error('Refusing to publish into the account root. Set OVH_SFTP_REMOTE_DIR to the website folder.');
     }
     await client.list();
+    const guard = phases.some(phase => phase.name === 'routing' && phase.files.length)
+      ? await routingGuard({ config, directory, destination, client, stateDirectory, reviewedConfigHash }) : null;
+    if (guard) await guard.inspect();
+    log(describeUploads(phases));
     if (checkOnly) {
       log(`Connection and directory verified: ${destination}. ${files} files ready; nothing uploaded.`);
       return;
     }
     log(`Uploading ${files} files from ${directory} to ${destination}...`);
     // Uploads built files only, overwriting matching files without deleting other remote content.
-    await client.uploadFromDir(directory);
+    for (const phase of phases) {
+      try {
+        if (phase.name === 'routing' && guard) {
+          if (!await guard.inspect()) await client.uploadFiles(directory, phase.files);
+          await guard.record();
+        } else await client.uploadFiles(directory, phase.files);
+      } catch (error) {
+        throw new Error(`Publish stopped during the ${phase.name} phase; subsequent phases were not started. ${error.message}`, { cause: error });
+      }
+    }
     log(`Published ${files} files successfully.`);
   } finally {
     await client.close();
@@ -94,20 +96,25 @@ async function main() {
   const { sites, values } = parseSiteArgs(process.argv.slice(2), {
     check: { type: 'boolean' },
     'dry-run': { type: 'boolean' },
+    'reviewed-config-sha256': { type: 'string' },
   });
   if (values.check && values['dry-run']) throw new Error('Choose either --check or --dry-run.');
+  if (values['reviewed-config-sha256'] && sites.length !== 1) throw new Error('Select one website when supplying a reviewed routing-config hash.');
   // Resolve every destination, build every selected site, and inspect every
   // output before making the first connection. Never upload the parent dist/.
   const plan = createPublishPlan(sites);
   try {
     await buildSites(sites);
-    for (const entry of plan) entry.files = await inspectBuild(entry.directory);
-    for (const { site, config, directory, files } of plan) {
+    for (const entry of plan) entry.uploadPlan = await planUploads(entry.directory);
+    for (const { site, config, directory, uploadPlan } of plan) {
+      const files = uploadPlan.reduce((sum, phase) => sum + phase.files.length, 0);
       if (values['dry-run']) {
         console.log(`[${site.id}] Dry run: ${files} files from ${site.output}/ would be uploaded to ${config.host}:${config.port}/${config.remoteDir.replace(/^\//, '')} using SFTP (SSH). No connection made.`);
+        console.log(describeUploads(uploadPlan));
       } else {
         const log = (message) => console.log(`[${site.id}] ${message}`);
-        await publishSite({ config, directory, client: new SftpPublishClient({ log }), checkOnly: values.check, log });
+        await publishSite({ config, directory, client: new SftpPublishClient({ log }), checkOnly: values.check, log, uploadPlan, reviewedConfigHash: values['reviewed-config-sha256'] });
+        if (!values.check && site.id === 'casai.run') await verifyReferenceRelease('https://casai.run', { log });
       }
     }
   } catch (error) {

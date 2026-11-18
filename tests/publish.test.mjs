@@ -33,7 +33,7 @@ function publishClientDouble() {
     async cd(path) { this.directory = path; },
     async pwd() { return this.directory ? `/${this.directory}` : '/'; },
     async list() { return []; },
-    async uploadFromDir(path) { this.uploaded.push(path); },
+    async uploadFiles(path, files) { this.uploaded.push(...files); },
     close() { this.closed = true; },
   };
 }
@@ -87,7 +87,7 @@ test('publishing uploads the validated build and closes the connection', async (
   const directory = await buildFixture(t);
   const client = publishClientDouble();
   await publishSite({ config: getPublishConfig(environment), directory, client, log() {} });
-  assert.deepEqual(client.uploaded, [directory]);
+  assert.deepEqual(client.uploaded, ['about/index.html', 'index.html']);
   assert.equal(client.closed, true);
 });
 
@@ -102,7 +102,7 @@ test('publishing refuses a destination that resolves to the SFTP account root', 
 
 test('login, destination, and upload failures propagate an error and close the connection', async (t) => {
   const directory = await buildFixture(t);
-  for (const method of ['access', 'cd', 'uploadFromDir']) {
+  for (const method of ['access', 'cd', 'uploadFiles']) {
     const client = publishClientDouble();
     client[method] = async () => { throw new Error('Transfer unavailable'); };
     await assert.rejects(publishSite({ config: getPublishConfig(environment), directory, client, log() {} }), /Transfer unavailable/);

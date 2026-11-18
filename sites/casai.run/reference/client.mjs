@@ -2,8 +2,9 @@ import { components, getControls, render, setLoads } from '../docs/matrix/matrix
 import { describe } from '../docs/matrix/reference.js';
 import provenance from '../docs/matrix-source.json';
 import { createRenderer, icons } from './render.mjs';
-import { restoreSelection, selectionUrl, referencePath } from './state.mjs';
+import { basePath, restoreSelection, selectionUrl } from './state.mjs';
 import { createExampleActions } from './example-actions.mjs';
+import { initializeGuide } from './guide-client.mjs';
 
 const root = document.querySelector('[data-matrix]');
 if (root) initialize();
@@ -83,17 +84,29 @@ function initialize() {
       root.querySelector('.ref-panels').innerHTML = renderer.panels(reference, example);
       enhanceViews();
       syncComponentNavigation();
-      root.querySelector('[data-export="md"]').href = `${referencePath(state.component, state.options)}README.md`;
-      root.querySelector('[data-export="json"]').href = `${referencePath(state.component, state.options)}reference.json`;
-      document.title = `${reference.form.factory || state.component} · Quick reference | Casai`;
-      document.querySelector('link[rel="canonical"]').href = new URL(referencePath(state.component, state.options), location.origin).href;
+      for (const format of ['md', 'json']) {
+        const link = root.querySelector(`[data-export="${format}"]`);
+        const url = new URL(selectionUrl(state.component, state.options, state.view), location.origin);
+        url.searchParams.set('download', format);
+        link.href = url.pathname + url.search;
+        link.hidden = false;
+      }
+      document.title = `${reference.form.factory || state.component} · Documentation | Casai`;
       const requestedView = state.view;
       setView(requestedView, false);
       if (writeHistory) updateUrl(replace, focus ? '' : location.hash);
       else if (state.view !== requestedView) updateUrl(true, focus ? '' : location.hash);
+      document.querySelector('link[rel="canonical"]').href = new URL(basePath, location.origin).href;
       if (focus) root.querySelector(focus)?.focus({ preventScroll: true });
       announce(message || `${reference.form.factory || state.component} reference updated.`);
       revealAnchor();
+      const downloadUrl = new URL(location.href);
+      const format = downloadUrl.searchParams.get('download');
+      if (format === 'md' || format === 'json') {
+        downloadUrl.searchParams.delete('download');
+        history.replaceState(null, '', downloadUrl.pathname + downloadUrl.search + downloadUrl.hash);
+        downloadReference(format);
+      }
     } catch (error) {
       announce(`The reference could not be updated. ${error.message}`);
       console.error(error);
@@ -103,7 +116,7 @@ function initialize() {
     const parsed = new URL(url, location.href);
     state = restoreSelection(parsed, initial);
     history.pushState(null, '', parsed);
-    update({ focus, writeHistory: false });
+    return update({ focus, writeHistory: false });
   }
   function changeOptions(options, focus) {
     const cleared = state.options.filter(id => !options.includes(id));
@@ -113,10 +126,16 @@ function initialize() {
     update({ focus, message });
   }
   const { copyCode, download } = createExampleActions(announce);
+  function downloadReference(format) {
+    const isJson = format === 'json';
+    download(isJson ? JSON.stringify({ schemaVersion: 3, reference: currentReference, example: currentExample, provenance }, null, 2)
+      : renderer.toMarkdown(currentReference, currentExample), `${currentExample.id}.${format}`, isJson ? 'application/json' : 'text/markdown');
+  }
 
   root.addEventListener('click', event => {
     const target = event.target.closest('a, button');
     if (!target || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    if (target.hash?.startsWith('#guide-')) return;
     if (target.hasAttribute('data-property-search-toggle')) {
       togglePropertySearch(target.getAttribute('aria-expanded') !== 'true');
     } else if (target.hasAttribute('data-component-choice')) {
@@ -138,8 +157,7 @@ function initialize() {
       const file = currentExample.files[Number(target.dataset.downloadFile)]; download(file.code, file.name);
     } else if (target.hasAttribute('data-export') && currentReference) {
       event.preventDefault();
-      const isJson = target.dataset.export === 'json';
-      download(isJson ? JSON.stringify({ schemaVersion: 3, reference: currentReference, example: currentExample, provenance }, null, 2) : renderer.toMarkdown(currentReference, currentExample), `${currentExample.id}.${isJson ? 'json' : 'md'}`, isJson ? 'application/json' : 'text/markdown');
+      downloadReference(target.dataset.export);
     } else if (target.hash && target.pathname === location.pathname) {
       event.preventDefault();
       const url = new URL(location.href);
@@ -215,5 +233,6 @@ function initialize() {
     update({ writeHistory: false });
   });
   window.addEventListener('hashchange', () => revealAnchor());
-  update({ replace: true, message: state.dropped.length ? `Restored this reference. Removed unavailable options: ${state.dropped.join(', ')}.` : '' });
+  initializeGuide({ root, navigate });
+  update({ replace: true, writeHistory: false, message: state.dropped.length ? `Restored this reference. Removed unavailable options: ${state.dropped.join(', ')}.` : '' });
 }

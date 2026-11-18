@@ -6,8 +6,11 @@ import test from 'node:test';
 import { parseSiteArgs, selectSites } from '../scripts/sites.mjs';
 import { cleanSite } from '../scripts/clean.mjs';
 import { renderDocumentation } from '../scripts/docs-render.mjs';
+import { createReferenceRoutes } from '../sites/casai.run/reference/routing.mjs';
+import { referenceSelections } from '../sites/casai.run/docs/matrix/matrix.js';
 
 const read = (site, file) => readFileSync(resolve('dist', site, file), 'utf8');
+const referenceRoutes = createReferenceRoutes(referenceSelections());
 function htmlFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -29,6 +32,13 @@ test('sites share components but isolate branding, content, feeds, and canonical
     const output = resolve(site.output);
     for (const path of htmlFiles(output).filter((path) => !path.includes(`${join('demos', '')}`))) {
       const html = readFileSync(path, 'utf8');
+      if (/^\/reference-assets\/chapters-[a-f\d]+\.html$/.test(path.slice(output.length).replaceAll('\\', '/'))) {
+        assert.match(html, /data-guide-loaded/);
+        assert.match(html, /id="guide-first-workflow"/);
+        assert.doesNotMatch(html, /<!doctype|<html|<h1(?:\s|>)|rel="canonical"/i, 'a chapter fragment is an asset, not another landing page');
+        assert.ok(!read(site.id, 'sitemap.xml').includes('/reference-assets/'), 'fragments stay out of the sitemap');
+        continue;
+      }
       assert.match(html, new RegExp(`aria-label="${metadata.name} home"`));
       assert.match(html, new RegExp(`<link rel="canonical" href="${metadata.url}`));
       assert.match(html, /href="\/brand.css"/);
@@ -39,7 +49,8 @@ test('sites share components but isolate branding, content, feeds, and canonical
       for (const [, value] of html.matchAll(/<(?:a|img|script|link|iframe)\b[^>]*?\b(?:href|src)="([^"]+)"/g)) {
         const url = new URL(value.replaceAll('&amp;', '&'), pageUrl);
         if (url.origin !== pageUrl.origin || value.startsWith('#')) continue;
-        assert.ok(existsSync(join(output, decodeURIComponent(url.pathname), url.pathname.endsWith('/') ? 'index.html' : '')), `${path}: ${value}`);
+        const route = site.id === 'casai.run' ? referenceRoutes.resolve(url) : null;
+        assert.ok(route?.location || existsSync(route?.file ? join(output, route.file) : join(output, decodeURIComponent(url.pathname), url.pathname.endsWith('/') ? 'index.html' : '')), `${path}: ${value}`);
       }
     }
     const sitemap = read(site.id, 'sitemap.xml');
@@ -54,12 +65,19 @@ test('sites share components but isolate branding, content, feeds, and canonical
   }
   assert.notEqual(read('cascada.dev', 'brand.css'), read('casai.run', 'brand.css'));
   assert.notEqual(read('cascada.dev', 'logo.svg'), read('casai.run', 'logo.svg'));
-  for (const path of ['posts', 'blog', 'feed.xml', 'cascada-script', 'images']) {
+  for (const path of ['cascada-script', 'images']) {
     assert.equal(existsSync(resolve('dist/casai.run', path)), false, path);
   }
-  assert.doesNotMatch(read('casai.run', 'index.html'), /Cascada home|Cascada Blog|href="\/feed.xml"|Playground/);
+  assert.doesNotMatch(read('casai.run', 'index.html'), /Cascada home|Cascada Blog|Playground/);
   assert.equal(read('casai.run', 'demos/headphones-workflow.html'), read('cascada.dev', 'demos/headphones-workflow.html'));
   assert.match(read('cascada.dev', 'feed.xml'), /<title>Cascada Blog<\/title>/);
+  assert.match(read('casai.run', 'feed.xml'), /<title>Casai Blog<\/title>/);
+  for (const site of selectSites()) {
+    const other = site.id === 'casai.run' ? 'cascada.dev' : 'casai.run';
+    const ownPosts = [...read(site.id, 'blog/index.html').matchAll(/href="(\/posts\/[^"#]+\/)"/g)].map(([, url]) => url);
+    assert.ok(ownPosts.length > 0);
+    for (const url of ownPosts) assert.ok(!read(other, 'feed.xml').includes(`https://${other}${url}`), 'post collections are isolated');
+  }
 });
 
 test('building one site cleans only its output, including when launched outside the repository', async (t) => {

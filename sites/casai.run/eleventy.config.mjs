@@ -4,7 +4,7 @@ import { configureReference } from './reference/build.mjs';
 
 // Casai extends the shared build; Cascada never imports its reference builder.
 export default async function (eleventy) {
-  const settings = configureSite(eleventy);
+  const settings = await configureSite(eleventy);
   await configureReference(eleventy, projectRoot);
   return settings;
 }

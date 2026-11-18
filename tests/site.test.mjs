@@ -26,7 +26,7 @@ test('all pages share the menu, assets, and one primary heading', () => {
     const menu = html.match(/<nav id="primary-nav"[\s\S]*?<\/nav>/)?.[0];
     assert.ok(menu, path);
     for (const item of nav) assert.ok(menu.includes(`href="${item.url}"`), `${path}: ${item.title}`);
-    assert.match(html, /<script src="\/main.js" type="module">/);
+    assert.match(html, /<script src="\/assets\/main-[a-f\d]{16}\.js" type="module">/);
     assert.match(html, /<link rel="stylesheet" href="\/styles.css">/);
     assert.equal((html.match(/<h1(?:\s|>)/g) || []).length, 1, path);
   }

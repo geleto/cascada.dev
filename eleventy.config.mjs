@@ -1,13 +1,36 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { resolve } from 'node:path';
+import { build } from 'esbuild';
 import { createMarkdownRenderer } from './scripts/markdown.mjs';
 import { highlight } from './shared/public/syntax.mjs';
-import { selectSites } from './scripts/sites.mjs';
+import { projectRoot, selectSites } from './scripts/sites.mjs';
 import pluginRss from '@11ty/eleventy-plugin-rss';
 
-export default function (eleventyConfig) {
+export default async function (eleventyConfig) {
   const site = selectSites(process.env.WEBSITE || 'cascada.dev')[0];
   const input = site.input;
   eleventyConfig.addGlobalData('siteId', site.id);
+  // Some static hosts omit a JavaScript MIME type for .mjs files. Ship the
+  // shared browser code and its imports as one .js asset so navigation starts
+  // without a separate module request. Hash it to refresh cached clients.
+  const browser = await build({
+    entryPoints: [resolve(projectRoot, 'shared/public/main.js')], bundle: true,
+    write: false, format: 'esm', platform: 'browser', target: ['es2020'],
+    minify: true, legalComments: 'eof',
+  });
+  const bytes = browser.outputFiles[0].contents;
+  const filename = `main-${createHash('sha256').update(bytes).digest('hex').slice(0, 16)}.js`;
+  const cache = resolve(projectRoot, '.cache/site-assets', site.id);
+  mkdirSync(cache, { recursive: true });
+  const asset = resolve(cache, filename);
+  writeFileSync(asset, bytes);
+  const mainScriptUrl = `/assets/${filename}`;
+  eleventyConfig.addPassthroughCopy({ [asset]: mainScriptUrl });
+  eleventyConfig.addGlobalData('mainScriptUrl', mainScriptUrl);
+  for (const source of ['main.js', 'syntax.mjs']) {
+    eleventyConfig.addWatchTarget(`./shared/public/${source}`, { resetConfig: true });
+  }
   eleventyConfig.addPlugin(pluginRss);
   const markdown = createMarkdownRenderer();
   // Ship colored code in the page HTML, before browser enhancements run.

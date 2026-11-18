@@ -48,8 +48,8 @@ The `codeExample` shortcode renders example files at build time, preserving
 literal Cascada Template syntax. The homepage Markdown opts into Nunjucks for
 these inserts; other Markdown keeps template evaluation disabled.
 
-The Casai homepage uses the canonical `simple` matrix profile; the quick
-reference uses `full`. Profiles live in Casai's `docs/matrix/profiles.js` and
+The Casai homepage uses the canonical `simple` matrix profile; the unified
+documentation uses `full`. Profiles live in Casai's `docs/matrix/profiles.js` and
 arrive through `matrix:sync`, so both views share examples and selection rules.
 The homepage shows Config first, followed by component buttons in the same
 responsive grid as the full reference, with short descriptions and examples for the selection.
@@ -57,6 +57,30 @@ Customization starts collapsed. Advanced choices and experimental SDK notices
 stay in the full reference; development notices remain visible on the homepage.
 Its separate browser entry excludes the full API-reference snapshot. Rendering,
 syntax highlighting, copy and download behavior are shared between both views.
+
+Casai's `/documentation/` remains the resource hub. `/documentation/reference/`
+combines the short introduction, matrix and all workflow chapters. Author the
+chapters only in `../casai/docs/matrix/documentation.md`, then run `matrix:sync`.
+The existing snapshot verification covers that file alongside the reference.
+Stable `guide-` HTML anchors work both on GitHub and in the shared renderer.
+Direct component URLs reuse the same physical page as the entry URL, which
+contains the chapters statically. The browser selects the requested API form.
+
+Casai blog articles are authored in `../casai/docs/matrix/articles/`, with their
+metadata in `index.json`, so their code stays covered by Casai's example checks.
+`matrix:sync` imports them alongside the reference. The website publishes them
+through the shared post layout, blog, feed and sitemap. A compact article list
+appears immediately after the matrix on entry and component pages. Keep core
+rules and stable anchors in the chapters when moving an extended walkthrough.
+
+The build generates `/documentation/reference/documentation.md` from the
+introduction, chapters and all canonical API forms. Identical reference
+contracts and examples appear once with their applicable forms. `/all/`
+renders that exact Markdown as HTML, without requiring JavaScript. Both are
+linked in initial HTML. Component URLs select views of one shared interactive
+page, whose canonical URL is `/documentation/reference/`; no user-agent
+detection redirects crawlers. The tracked `sites/casai.run/redirects.htaccess`
+preserves the old `/documentation/quick-reference/` prefix for every visitor.
 
 ## Development and building
 
@@ -128,6 +152,7 @@ publishing defaults. CI may supply all required prefixed variables without a
 local `.env` file.
 
 - `--dry-run` validates configuration and builds/inspects the selected outputs,
+  showing the same asset, page and routing-file phases used for uploads,
   without connecting.
 - `--check` also checks the SFTP login and existing target directory, without
   uploading or changing remote files.
@@ -139,6 +164,41 @@ connection. Overlapping configured destinations on the same SFTP account are
 rejected. Uploads are sequential, not transactional: if a later upload fails,
 an earlier site may already be published. Correct the failure and rerun that
 site's command.
+
+File transfers and remote-file reads retry transient SFTP failures up to three
+times, waiting 1, 2 and 4 seconds. Upload retries resume at the failed file and
+recheck remote paths, including directories that may already have been created.
+Dropped connections reconnect with the same verified SSH host key and destination.
+The SFTP library labels a generic mkdir failure as `permission denied`; this
+ambiguous error is retried too. Explicit permission failures, authentication
+failures and unsafe paths stop immediately. Persistent failures report the file,
+attempt count and publish phase; check hosting permissions and disk/file quotas
+if a generic server failure keeps occurring. Retries do not change permissions
+or delete remote files. Routing-file writes are not automatically retried because
+an uncertain write needs the routing baseline checked again.
+
+Uploads send supporting assets first (including versioned chapter HTML),
+pages and navigation second, and the root `.htaccess` last. Earlier failures
+prevent routing activation. This ordering is not an atomic site replacement;
+version coupled assets and keep older pages compatible during a release.
+
+Before uploading, and again before the final phase, the publisher reads the
+remote `.htaccess`. It may create an absent file, retain identical bytes or
+update a file matching its last successful baseline. Unknown changes stop the
+publish. Baselines are scoped to host, port, account and resolved destination
+in `.cache/publish-config/`; they contain no passwords. On a first publish or
+after an external edit, fetch and inspect the remote rules, merge what must
+remain into `redirects.htaccess`, and supply `--reviewed-config-sha256 HASH`
+for that reviewed remote file. Losing local state does not silently approve
+overwriting an unknown remote configuration.
+
+Each Casai publish verifies the legacy 301 status, Location, query preservation,
+new destinations and complete downloads. Run `node scripts/verify-reference.mjs`
+to repeat those public checks independently. Browser acceptance additionally
+covers fragments and Back/Forward navigation. Old remote pages are retained;
+HTTP 200 from an old URL is a verification failure, not proof of a working move.
+Publish the new destinations and redirect before publicly releasing the Casai
+README changes that link to them. No remote cleanup is part of this migration.
 
 SFTP remembers the SSH host key on the first successful connection in the
 Git-ignored `.cache/sftp-host-keys/` directory and rejects subsequent key changes.
@@ -163,8 +223,12 @@ only the current site's content and canonical domain.
 
 Put each site's public assets in `sites/<website>/public/`. They are copied to
 that site's root, so its logo is always `/logo.svg` and its layout overrides `/brand.css`.
-Shared assets retain stable URLs such as `/colors.css`, `/styles.css`, and `/main.js`. Keep
-site-specific asset filenames separate from files in `shared/public/`.
+Shared styles retain stable URLs such as `/colors.css` and `/styles.css`. The shared
+browser entry in `shared/public/main.js` and its syntax-highlighting dependency are
+bundled into `/assets/main-<hash>.js`. Pages use that versioned URL so cached clients
+refresh it after a change, and static hosting never needs to serve an imported
+`.mjs` file with a JavaScript MIME type for navigation to work. Keep site-specific
+asset filenames separate from files in `shared/public/`.
 
 **Edit `shared/public/colors.css` to change colors for both sites.** It contains
 the shared palette, Casai's brand overrides, reference badges/notices, and the
@@ -296,9 +360,9 @@ highlight the current section without moving keyboard focus. The index builder
 and legacy heading IDs are adapted from Cascada's `scripts/docs-gen.js`;
 licenses remain in `docs/licenses/`.
 
-## Casai quick reference
+## Casai component reference
 
-Open `/documentation/quick-reference/` on Casai. A two-column component picker
+Open `/documentation/reference/` on Casai. A two-column component picker
 sits above compact filters in the left column; the whole page scrolls together.
 The reader title shows the full `Component.modifiers({...})` call, followed
 by its description and compact Input and Return rows. Each row keeps its summary
@@ -334,7 +398,7 @@ upstream package. Legacy Info links open Notes; old Input & return tab links ope
 Return when available, or the simple return summary otherwise. Existing property,
 result-member, and concept anchors stay valid. No settings
 are omitted merely because an example omits them.
-Planned Translator and available streaming translation stay distinct.
+Completed and streaming results stay distinct; planned components retain their notices.
 
 ### Data ownership and synchronization
 
@@ -386,13 +450,42 @@ changes are explicitly marked and identified by file hashes.
 
 ### Static publishing and verification
 
-`referenceSelections()` in Casai enumerates canonical API forms. Eleventy builds
-one complete HTML page per form, plus `README.md` and `reference.json` at the
-same URL. `/documentation/quick-reference/forms/` lists every form, and
-`index.json` provides their URLs, selections, catalog, concepts, and versions.
-All readable sections and property anchors exist without JavaScript. Browser
-enhancement adds tabs and example controls; its exports include the complete
-current selection. SDK notices/licenses are distributed under `notices/`.
+`referenceSelections()` in Casai enumerates API forms. All form URLs are mapped
+to one physical reference page using grouped Apache rewrite rules generated
+from that catalog. The local preview uses the same route catalog. The browser
+restores the component, options, tab and anchor from the URL and renders it
+using the shared data and templates already in the reference bundle. There are
+no per-form HTML, JSON or Markdown files and no server-side application runtime.
+
+Individual Markdown and JSON exports are generated in the browser. Legacy
+export URLs redirect to the corresponding form with `?download=md` or
+`?download=json`. These are browser download routes, not raw HTTP data endpoints;
+the generated JSON contents retain schema version 3. The compact `index.json`
+uses schema version 4 to identify this export mode and list interactive routes,
+static Read all anchors, selections, catalog, concepts and versions.
+
+The single Markdown and Read all HTML remain real static files with every
+chapter and component contract plus representative examples. The forms index
+links directly to these static anchors as well as the interactive view. Form
+URLs share the interactive page's canonical URL; the static Read all page keeps
+its own canonical. SDK notices/licenses remain under `notices/`. Tests enforce
+a publication budget below 50 files and 12 MB to catch repeated exports.
+
+`reference/export-reference.mjs` defines what the linear publication exports
+from the existing matrix data. It groups forms under their components, factors
+property and method rules into shared entries with explicit conditions, and
+defines nested shapes and long types once. Source modifiers share explanations;
+contextual notes link to their existing chapters. The authored chapters are
+included without editorial changes. One base example per component and a small
+explicit selection of distinct patterns are included; all example combinations
+remain available in the interactive matrix and its individual downloads. There
+is no separate authored summary or AI documentation. Read all renders exactly
+the same generated Markdown. Contract and anchor checks accompany budgets of
+750 KB for Markdown, 1.1 MB for its HTML and at most 25 matrix examples.
+
+The old publication and interrupted uploads remain on the server until a
+separately reviewed cleanup. A smaller build does not remove those remote
+copies; back them up and plan that cleanup when migrating a nearly full host.
 
 Run `npm test` for both websites and all tests. For focused reference work, run
 `npm run build -- casai.run`, then

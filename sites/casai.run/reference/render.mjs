@@ -5,6 +5,7 @@ import { createMatrix } from '../docs/matrix/profiles.js';
 import { introduction } from '../docs/matrix/introduction.js';
 import { isTypeAbbreviated } from '../docs/matrix/reference/type-display.js';
 import { availableViews, basePath, componentChoices, hasReturnReference, referencePath, selectionUrl, viewTitles } from './state.mjs';
+import { referenceLink } from './links.mjs';
 
 export const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const anchor = value => String(value).replace(/[^\w-]/g, '-');
@@ -25,7 +26,10 @@ export function createRenderer(provenance, { profile = 'full' } = {}) {
   const simple = profile === 'simple';
   const markdown = new MarkdownIt({ html: false, highlight });
   const repositoryBase = `${provenance.repository}/blob/${provenance.commit}/`;
-  const link = value => /^(?:https?:|mailto:|#)/.test(value) || value.startsWith(basePath) ? value : new URL(value, repositoryBase).href;
+  const link = value => {
+    const resolved = referenceLink(value);
+    return /^(?:https?:|mailto:|#)/.test(resolved) || resolved.startsWith(basePath) ? resolved : new URL(resolved, repositoryBase).href;
+  };
   const renderLink = markdown.renderer.rules.link_open || ((tokens, index, options, env, self) => self.renderToken(tokens, index, options));
   markdown.renderer.rules.link_open = (tokens, index, options, env, self) => {
     const token = tokens[index];
@@ -60,7 +64,7 @@ export function createRenderer(provenance, { profile = 'full' } = {}) {
 
   function detailsMarkdown(details, depth = 5) {
     if (!details) return '';
-    return `**${details.name} — ${details.appliesTo}**\n\n${typeBlock(details.type)}` + details.variants.map((variant, index) =>
+    return `**${details.name} - ${details.appliesTo}**\n\n${typeBlock(details.type)}` + details.variants.map((variant, index) =>
       `${details.variants.length > 1 ? `**Alternative ${index + 1}**\n\n` : ''}${typeBlock(variant.type)}${nativeMarkdown(variant.properties, depth)}`).join('\n');
   }
   function nativeMarkdown(properties = [], depth = 4) {
@@ -69,13 +73,13 @@ export function createRenderer(provenance, { profile = 'full' } = {}) {
       (property.tags || []).filter(tag => ['deprecated', 'default', 'defaultValue', 'returns', 'param'].includes(tag.name)).map(tag => list(titleCase(tag.name), tag.text)).join('') +
       detailsMarkdown(property.details, depth + 1) + nativeMarkdown(property.nested, depth + 1) + sourceNote(property.source) + '\n\n' + sourceNote(property.descriptionSource, 'Description source') + '\n\n').join('');
   }
-  function propertyMarkdown(property) {
+  function propertyMarkdown(property, { includeApplicability = true } = {}) {
     return `${property.description}\n\n${property.typeDescription ? property.typeDescription + '\n\n' : ''}${typeBlock(property.type)}` +
       list('Required', property.required.description) + list('Default', property.default) +
       list('Available in', property.locations.map(location => ({ construction: 'construction', run: '`.run()`', ordinary: 'ordinary calls' })[location]).join(', ')) +
       list('Overrides', property.override) + list('Inheritance', property.inheritance) + list('Scope', property.scope) + list('Origin', property.origin) +
       list('Adaptation', property.adaptation) + list('Notes', property.notes) + list('Deprecated', property.deprecated) + list('Alias for', property.aliasFor) +
-      list('Applies to', [property.applicability.component, property.applicability.sourceMode, ...(property.applicability.operations || [])].filter(Boolean).join(' · ')) +
+      list('Applies to', [...(includeApplicability ? [property.applicability.component, property.applicability.sourceMode] : []), ...(property.applicability.operations || [])].filter(Boolean).join(' · ')) +
       detailsMarkdown(property.details) + nativeMarkdown(property.nested) +
       (property.upstream ? `#### Original AI SDK contract\n\n${property.upstream.description}\n${typeBlock(property.upstream.type)}${sourceNote(property.upstream, 'AI SDK source')}\n\n` : '') +
       sourceNote(property.source) + '\n\n';
@@ -230,7 +234,7 @@ export function createRenderer(provenance, { profile = 'full' } = {}) {
     ).join('')}${nativeHtml(reference.result.additionalProperties, 'result-addition')}</section>`;
   }
   function notes(reference) {
-    return `<span id="info"></span>${reference.concepts.map(concept => `<details class="ref-concept" id="concept-${anchor(concept.id)}"><summary>${escape(concept.title)}</summary><div class="ref-prose">${concept.paragraphs.map(md).join('')}<a href="${escape(link(concept.link))}">Read the guide ↗</a></div></details>`).join('')}
+    return `<span id="info"></span>${reference.concepts.map(concept => `<details class="ref-concept" id="concept-${anchor(concept.id)}"><summary>${escape(concept.title)}</summary><div class="ref-prose">${concept.paragraphs.map(md).join('')}<a href="${escape(link(concept.link))}">Explanation and examples ↓</a></div></details>`).join('')}
       ${descriptionSources(reference) ? `<div class="ref-attribution">${md(descriptionSources(reference))}</div>` : ''}`;
   }
   function example(example, reference, { compact = false } = {}) {
@@ -275,9 +279,10 @@ export function createRenderer(provenance, { profile = 'full' } = {}) {
   function panels(reference, exampleData) {
     return availableViews(reference).map(view => `<section id="${view}" class="ref-panel" data-panel="${view}" aria-labelledby="tab-${view}">${panel(view, reference, exampleData)}</section>`).join('');
   }
-  function shell(reference, exampleData) {
+  function shell(reference, exampleData, { navigation = '' } = {}) {
+    navigation = navigation.replaceAll('href="#guide-', `href="${basePath}#guide-`);
     return `<div class="ref-shell" data-matrix data-component="${reference.component}" data-options="${escape(reference.activeOptions.join(','))}">
-      <header class="ref-page-heading"><a class="ref-breadcrumb" href="/documentation/">Documentation <span aria-hidden="true">/</span></a><h1>Quick reference</h1><p>Explore the components. Shape an example. Find the setting you need.</p><div class="ref-version">Casai ${escape(reference.versions.casai)}<span>·</span>${componentChoices.length} components<span>·</span><a href="${escape(provenance.repository)}/tree/${provenance.commit}">${provenance.commit.slice(0, 8)}</a>${provenance.modified ? '<span>+ local changes</span>' : ''}</div></header>
+      <header class="ref-page-heading"><a class="ref-breadcrumb" href="/documentation/">Documentation hub <span aria-hidden="true">/</span></a><h1>Casai documentation</h1><p>Learn the principles. Explore the components. Build your workflow.</p><div class="ref-version">Casai ${escape(reference.versions.casai)}<span>·</span>${componentChoices.length} components<span>·</span><a href="${escape(provenance.repository)}/tree/${provenance.commit}">${provenance.commit.slice(0, 8)}</a>${provenance.modified ? '<span>+ local changes</span>' : ''}</div><nav class="ref-document-actions" aria-label="Documentation formats"><a href="${basePath}#guide-first-workflow">Start building ↓</a><a href="${basePath}all/">Read all without JavaScript</a><a href="${basePath}documentation.md" download>Download all documentation (.md)</a></nav>${navigation}</header>
       <section class="ref-introduction" aria-labelledby="introduction-title">
         <div class="ref-intro-heading"><h2 id="introduction-title">${escape(introduction.title)}</h2><a href="#component-factories">Explore the components <span aria-hidden="true">↓</span></a></div>
         <div class="ref-intro-lead ref-prose">${md(introduction.lead)}</div>
@@ -291,8 +296,8 @@ export function createRenderer(provenance, { profile = 'full' } = {}) {
       <div class="ref-reader"><div data-reference-heading>${heading(reference)}</div>
         <div class="ref-toolbar"><div class="ref-tabs" aria-label="Reference views">${tabs(reference)}</div></div>
         <div class="ref-panels">${panels(reference, exampleData)}</div>
-        <footer class="ref-reader-footer"><span>Take this reference with you</span><div><a data-export="md" href="${referencePath(reference.component, reference.activeOptions)}README.md">Markdown ↓</a><a data-export="json" href="${referencePath(reference.component, reference.activeOptions)}reference.json">JSON ↓</a></div></footer>
-      </div></div><p class="ref-live" data-ref-status role="status" aria-live="polite"></p><noscript><p class="ref-notice">All reference sections are shown. Enable JavaScript to customize examples. <a href="${basePath}forms/">Browse all API forms</a>.</p></noscript>
+        <footer class="ref-reader-footer"><span>Take this reference with you</span><div><a data-export="md" href="${basePath}documentation.md">Markdown ↓</a><a data-export="json" href="${basePath}all/" hidden>JSON ↓</a></div></footer>
+      </div></div><p class="ref-live" data-ref-status role="status" aria-live="polite"></p><noscript><p class="ref-notice">Enable JavaScript to select forms, customize examples and download individual references. <a href="${basePath}forms/">Browse every form without JavaScript</a> or <a href="${basePath}documentation.md" download>download all documentation</a>.</p></noscript>
       <details class="ref-build-info"><summary>Reference versions &amp; sources</summary><dl>${Object.entries(reference.versions).map(([name, version]) => `<dt>${escape(name)}</dt><dd>${escape(version)}</dd>`).join('')}</dl><p>Source revision: <a href="${provenance.repository}/tree/${provenance.commit}">${provenance.commit}</a>${provenance.modified ? ' with local changes; exact file hashes are recorded in the snapshot.' : ''}</p><p><a href="${basePath}source.json">Snapshot provenance</a> · <a href="${basePath}forms/">Browse all API forms</a> · <a href="${basePath}index.json">Reference index</a> · <a href="${basePath}notices/THIRD_PARTY.md">Sources &amp; licenses</a></p></details></div>`;
   }
   function simpleHeading(exampleData) {
@@ -330,14 +335,14 @@ export function createRenderer(provenance, { profile = 'full' } = {}) {
     for (const file of exampleData.files) text += `### ${file.name}\n\n\`\`\`${file.language}\n${file.code}\`\`\`\n\n`;
     text += exampleData.explanations.map(value => `- ${value}\n`).join('') + '\n';
     if (reference.config.supportedSources.length) text += '## Supported sources\n\n' + reference.config.supportedSources.map(form => `### ${form.modifier || 'Default'}\n\n${form.explanation}\n\nTool support: ${form.toolSupported}. Applicable to selected form: ${form.applicable}.\n\n`).join('');
-    if (reference.config.alternatives.length) text += '## Compatible component configurations\n\nThese components support the selected modifiers. The settings you put in Config must also fit the receiving component.\n\n' + reference.config.alternatives.map(alternative => `- [${alternative.factory}](${referencePath(alternative.component, alternative.activeOptions)}README.md)\n`).join('') + '\n';
+    if (reference.config.alternatives.length) text += '## Compatible component configurations\n\nThese components support the selected modifiers. The settings you put in Config must also fit the receiving component.\n\n' + reference.config.alternatives.map(alternative => `- [${alternative.factory}](${referencePath(alternative.component, alternative.activeOptions)}?view=config)\n`).join('') + '\n';
     for (const section of reference.config.sections) {
       if (!section.propertyIds.length && !section.methods?.length && !section.notes?.length) continue;
       text += `## ${section.name}\n\n${(section.notes || []).join('\n\n')}\n\n`;
       for (const id of section.propertyIds) text += `<a id="property-${anchor(id)}"></a>\n\n### ${id}\n\n${propertyMarkdown(reference.config.properties[id])}`;
       for (const method of section.methods || []) text += `<a id="method-${anchor(method.name)}"></a>\n\n### ${method.name}\n\n${methodMarkdown(method)}`;
     }
-    for (const concept of reference.concepts) text += `## ${concept.title}\n\n${concept.paragraphs.join('\n\n')}\n\n[Read the guide](${link(concept.link)})\n\n`;
+    for (const concept of reference.concepts) text += `## ${concept.title}\n\n${concept.paragraphs.join('\n\n')}\n\n[Explanation and examples](${link(concept.link)})\n\n`;
     for (const property of reference.relatedProperties) text += `## Related property: ${property.name}\n\n${propertyMarkdown(property)}`;
     text += `## Result reference\n\n${reference.result.description}\n\n${list('As a tool', reference.result.tool)}`;
     for (const shape of reference.result.shapes) text += `### ${shape.name}\n\n${nativeMarkdown(shape.properties)}`;
@@ -346,5 +351,5 @@ export function createRenderer(provenance, { profile = 'full' } = {}) {
     // Resolve authored repository links just as the HTML renderer does.
     return text.replace(/\]\(([^)]+)\)/g, (match, url) => `](${link(url)})`);
   }
-  return { shell, heading, controls, panel, panels, tabs, example, config, returns, notes, toMarkdown, simpleShell, simpleHeading, simpleControls };
+  return { shell, heading, controls, panel, panels, tabs, example, config, returns, notes, toMarkdown, simpleShell, simpleHeading, simpleControls, propertyMarkdown, methodMarkdown, nativeMarkdown };
 }

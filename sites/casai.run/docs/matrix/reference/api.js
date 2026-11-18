@@ -432,7 +432,6 @@ export default {
   },
   "shapes": {
     "Template_config": [
-      "template-902b6327f5ff",
       "inputSchema-f335a5a81f68",
       "filters-e21828790709",
       "renderOptions-0b6a6f477332",
@@ -441,7 +440,8 @@ export default {
       "debug-cdff8d93c93d",
       "description-094750903948",
       "tools-05ebb5c95a02",
-      "toolsContext-492a80518673"
+      "toolsContext-492a80518673",
+      "template-902b6327f5ff"
     ],
     "Template_settings": [
       "template-902b6327f5ff",
@@ -461,8 +461,6 @@ export default {
       "prepared-01eff35c8614"
     ],
     "Script_config": [
-      "script-3ee7336160ef",
-      "schema-288e8cf2b21a",
       "inputSchema-f335a5a81f68",
       "filters-e21828790709",
       "renderOptions-0b6a6f477332",
@@ -471,7 +469,9 @@ export default {
       "debug-cdff8d93c93d",
       "description-094750903948",
       "tools-05ebb5c95a02",
-      "toolsContext-492a80518673"
+      "toolsContext-492a80518673",
+      "schema-288e8cf2b21a",
+      "script-56e0c02bea00"
     ],
     "Script_settings": [
       "script-3ee7336160ef",
@@ -2306,16 +2306,6 @@ export default {
     ]
   },
   "properties": {
-    "template-902b6327f5ff": {
-      "name": "template",
-      "type": "string",
-      "optional": false,
-      "description": "",
-      "tags": [],
-      "source": {
-        "path": "src/types/config.ts"
-      }
-    },
     "inputSchema-f335a5a81f68": {
       "name": "inputSchema",
       "type": "SchemaType<Record<string, any>> | undefined",
@@ -2406,6 +2396,16 @@ export default {
         "path": "src/types/config.ts"
       }
     },
+    "template-902b6327f5ff": {
+      "name": "template",
+      "type": "string",
+      "optional": false,
+      "description": "",
+      "tags": [],
+      "source": {
+        "path": "src/types/config.ts"
+      }
+    },
     "direct-c287cb6ac7c7": {
       "name": "direct",
       "type": "string",
@@ -2427,9 +2427,9 @@ export default {
       "description": "",
       "tags": []
     },
-    "script-3ee7336160ef": {
-      "name": "script",
-      "type": "string | undefined",
+    "schema-288e8cf2b21a": {
+      "name": "schema",
+      "type": "SchemaType<unknown> | undefined",
       "optional": true,
       "description": "",
       "tags": [],
@@ -2437,9 +2437,19 @@ export default {
         "path": "src/types/config.ts"
       }
     },
-    "schema-288e8cf2b21a": {
-      "name": "schema",
-      "type": "SchemaType<unknown> | undefined",
+    "script-56e0c02bea00": {
+      "name": "script",
+      "type": "string",
+      "optional": false,
+      "description": "",
+      "tags": [],
+      "source": {
+        "path": "src/types/config.ts"
+      }
+    },
+    "script-3ee7336160ef": {
+      "name": "script",
+      "type": "string | undefined",
       "optional": true,
       "description": "",
       "tags": [],

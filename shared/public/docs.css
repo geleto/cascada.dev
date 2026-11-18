@@ -2,6 +2,9 @@
 .docs-main { padding-block: 28px 52px; }
 .docs-layout { max-width: 1380px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 40px; }
 .docs-article { min-width: 0; }
+.ref-read-all { max-width: 1100px; }
+.ref-read-all header { margin-bottom: 32px; }
+.ref-read-all .prose [id] { scroll-margin-top: calc(var(--header-min-height) + 24px); }
 .docs-main > .reading-column { max-width: 960px; }
 .docs-main .article-header { margin-bottom: 24px; }
 .docs-main .article-header h1 { margin-block: 0 16px; font-size: clamp(28px, 3.2vw, 38px); letter-spacing: -.03em; }

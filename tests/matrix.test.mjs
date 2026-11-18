@@ -6,6 +6,7 @@ import { components, referenceSelections, render } from '../sites/casai.run/docs
 import { describe } from '../sites/casai.run/docs/matrix/reference.js';
 import { availableViews, basePath, referencePath, selectionUrl, restoreSelection, views } from '../sites/casai.run/reference/state.mjs';
 import { createRenderer } from '../sites/casai.run/reference/render.mjs';
+import { createReferenceRoutes } from '../sites/casai.run/reference/routing.mjs';
 
 const output = 'dist/casai.run';
 const read = path => readFileSync(`${output}${path}`, 'utf8');
@@ -21,22 +22,28 @@ test('saved matrix is a verified, standalone package with upstream notices', () 
   assert.equal(existsSync('dist/cascada.dev/reference-assets'), false);
 });
 
-test('every canonical form publishes complete HTML, Markdown and JSON with stable anchors', () => {
+test('every form uses one published page and renders complete content from the shared data', async () => {
   const linkedAnchors = new Map();
   const index = JSON.parse(read(`${basePath}index.json`));
-  assert.equal(index.schemaVersion, 3);
+  const routes = createReferenceRoutes(referenceSelections());
+  const renderer = createRenderer(provenance);
+  assert.equal(index.schemaVersion, 4);
+  assert.equal(index.exports.mode, 'browser');
   assert.equal(index.references.length, referenceSelections().length);
   for (const selection of referenceSelections()) {
     const url = referencePath(selection.component, selection.activeOptions);
-    const html = read(`${url}index.html`);
-    const markdown = read(`${url}README.md`);
-    const exported = JSON.parse(read(`${url}reference.json`));
-    assert.equal(exported.schemaVersion, 3);
     const reference = describe(selection.component, selection.activeOptions);
+    const example = await render(selection.component, selection.activeOptions);
+    const html = renderer.shell(reference, example);
+    const markdown = renderer.toMarkdown(reference, example);
+    assert.equal(routes.resolve(new URL(url, 'https://casai.run')).file, `${basePath.slice(1)}index.html`);
+    for (const file of ['index.html', 'README.md', 'reference.json']) assert.equal(existsSync(`${output}${url}${file}`), false, 'no per-form copies');
+    const entry = index.references.find(entry => entry.url === url);
+    assert.equal(entry.markdown, `${url}?download=md`);
+    assert.equal(entry.json, `${url}?download=json`);
+    assert.ok(read(`${basePath}all/index.html`).includes(`id="ref-${selection.id.toLowerCase()}"`));
     assert.equal(reference.config.properties.promptType, undefined, `${url}: source mode belongs to modifiers`);
     assert.doesNotMatch(html, /id="property-promptType"/);
-    assert.deepEqual(exported.reference, JSON.parse(JSON.stringify(reference)));
-    assert.equal(exported.provenance.commit, provenance.commit);
     assert.equal((html.match(/<h1(?:\s|>)/g) || []).length, 1, url);
     const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
     assert.equal(ids.length, new Set(ids).size, `${url}: duplicate anchors`);
@@ -64,10 +71,10 @@ test('every canonical form publishes complete HTML, Markdown and JSON with stabl
       assert.equal(target.hash, `#${kind}-${name}`);
       assert.ok(linkedAnchors.get(key).has(`${kind}-${name}`), `${url}: option link to missing ${href}`);
     }
-    assert.match(html, /type="text\/markdown"/);
+    assert.match(read(`${basePath}index.html`), /type="text\/markdown"/);
     assert.ok(markdown.includes(`**Status:** ${reference.status}`));
-    for (const file of exported.example.files) assert.ok(markdown.includes(file.code), `${url}: complete ${file.name}`);
-    // The static reference remains complete before browser code chooses a tab.
+    for (const file of example.files) assert.ok(markdown.includes(file.code), `${url}: complete ${file.name}`);
+    // The shared renderer produces every view, not just the visible example.
     for (const view of views) {
       const pattern = new RegExp(`id="${view}" class="ref-panel" data-panel="${view}"`);
       if (availableViews(reference).includes(view)) assert.match(html, pattern);
@@ -85,8 +92,8 @@ test('URLs preserve examples, distinguish API forms, and normalize obsolete choi
   const restored = restoreSelection(new URL(selectionUrl('LLMAgent', options, 'config', '#property-model'), 'https://casai.run'), initial);
   assert.deepEqual(restored, { component: 'LLMAgent', options, view: 'config', dropped: [] });
   assert.equal(referencePath('LLMAgent', options), referencePath('LLMAgent', ['asTool', 'loadTemplate']));
-  assert.deepEqual(restoreSelection(new URL('https://casai.run/documentation/quick-reference/translator_asstream/'), initial).options, ['asStream']);
-  const obsolete = restoreSelection(new URL('https://casai.run/documentation/quick-reference/llmagent/?options=unknown,asTool,asStream&view=invalid'), initial);
+  assert.deepEqual(restoreSelection(new URL('https://casai.run/documentation/reference/translator_asstream/'), initial).options, ['asStream']);
+  const obsolete = restoreSelection(new URL('https://casai.run/documentation/reference/llmagent/?options=unknown,asTool,asStream&view=invalid'), initial);
   assert.ok(obsolete.dropped.includes('unknown'));
   assert.equal(obsolete.view, 'example');
   assert.notEqual(obsolete.options.includes('asTool'), obsolete.options.includes('asStream'));
@@ -109,7 +116,7 @@ test('renderer preserves work-in-progress notices, nested alternatives and all r
   assert.ok(!renderer.shell(withUnusedSummary, example).includes('Unused short summary'));
   for (const file of example.files) assert.ok(html.includes(file.name));
   assert.match(renderer.config(reference), /Alternative 1/);
-  assert.match(renderer.toMarkdown(reference, example), new RegExp(`${provenance.commit}/README.md#`));
+  assert.match(renderer.toMarkdown(reference, example), /documentation\/reference\/#guide-/);
   assert.equal(components.length, 16);
   const toolReference = describe('LLMAgent', ['asTool', 'loadTemplate']);
   assert.ok(renderer.heading(toolReference).replaceAll('<wbr>', '').includes('LLMAgent.loadsTemplate.asTool'));
