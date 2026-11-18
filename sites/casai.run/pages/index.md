@@ -198,7 +198,7 @@ npm install @ai-sdk/openai@4
 
 This component turns a document into a one-sentence summary. Reuse it in [CascadaScript](https://cascada.dev/cascada-script/), combine it with your APIs, or expose it as a tool.
 
-<div class="home-actions"><a class="home-button" href="/documentation/reference/#guide-first-workflow">Continue with the documentation <span aria-hidden="true">↗</span></a><a href="/documentation/reference/#component-factories">Explore the reference <span aria-hidden="true">→</span></a></div>
+<div class="home-actions"><a class="home-button" href="/documentation/reference/#guide-first-workflow">Continue in the documentation <span aria-hidden="true">↗</span></a></div>
 
 </div>
 
